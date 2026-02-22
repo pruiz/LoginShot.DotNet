@@ -68,6 +68,7 @@ Agents may scaffold this structure as needed.
 - Capture one still image quickly.
 - Release camera resources after capture.
 - Handle failures gracefully (log + continue, no crash).
+- Apply configurable watermark on successful captures (default enabled), including hostname and timestamp format.
 
 ### Triggers
 - Capture once on app launch after login (`logon`).
@@ -87,6 +88,7 @@ Agents may scaffold this structure as needed.
   2. `%APPDATA%\LoginShot\config.yml`
 - Expand `%USERPROFILE%`, `%APPDATA%`, and `%LOCALAPPDATA%`.
 - Normalize configured Windows path separators as needed (support `\` and `/` in YAML path values).
+- Support configurable watermark settings (enabled flag and timestamp format string).
 - Provide safe defaults.
 - Validate config and fail with clear diagnostics.
 
@@ -184,6 +186,7 @@ If lint tools are not configured, follow existing style in touched files and avo
   - Startup task registration/unregistration
   - Config auto-reload behavior and invalid-reload fallback semantics
   - Logging config and retention behavior
+  - Watermark config defaults, parsing, and validation
   - Metadata sidecar generation
 - Prefer deterministic tests with mocks/fakes for camera and clock.
 - Add integration/dev harness only when needed (e.g., debug trigger).
