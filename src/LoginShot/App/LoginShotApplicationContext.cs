@@ -158,14 +158,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private static LoginShotConfig LoadConfigOnStartup(IConfigLoader loader)
     {
-        try
-        {
-            return loader.Load();
-        }
-        catch (Exception exception)
-        {
-            throw new ConfigValidationException($"Failed to load configuration at startup: {exception.Message}");
-        }
+        return loader.Load();
     }
 
 }
