@@ -10,35 +10,43 @@ public class ConfigReloadCoordinatorTests
     [Test]
     public void RequestReload_WhenLoadSucceeds_InvokesSuccessCallbackWithFlags()
     {
-        var expectedConfig = CreateConfig("C:\\Users\\pablo\\AppData\\Roaming\\LoginShot\\config.yml");
-        LoginShotConfig? succeededConfig = null;
-        bool? notifyFlag = null;
-        bool? autoFlag = null;
-        Exception? failure = null;
-
-        using var coordinator = new ConfigReloadCoordinator(
-            new ImmediateSynchronizationContext(),
-            () => expectedConfig,
-            (config, notifyOnSuccess, autoReload) =>
-            {
-                succeededConfig = config;
-                notifyFlag = notifyOnSuccess;
-                autoFlag = autoReload;
-            },
-            (exception, _, _) => failure = exception,
-            _ => { },
-            NullLogger.Instance,
-            TimeSpan.FromMilliseconds(25));
-
-        coordinator.RequestReload(notifyOnSuccess: true, autoReload: false);
-
-        Assert.Multiple(() =>
+        var tempDirectory = CreateTempDirectory();
+        try
         {
-            Assert.That(failure, Is.Null);
-            Assert.That(succeededConfig, Is.EqualTo(expectedConfig));
-            Assert.That(notifyFlag, Is.True);
-            Assert.That(autoFlag, Is.False);
-        });
+            var expectedConfig = CreateConfig(Path.Combine(tempDirectory, "config.yml"));
+            LoginShotConfig? succeededConfig = null;
+            bool? notifyFlag = null;
+            bool? autoFlag = null;
+            Exception? failure = null;
+
+            using var coordinator = new ConfigReloadCoordinator(
+                new ImmediateSynchronizationContext(),
+                () => expectedConfig,
+                (config, notifyOnSuccess, autoReload) =>
+                {
+                    succeededConfig = config;
+                    notifyFlag = notifyOnSuccess;
+                    autoFlag = autoReload;
+                },
+                (exception, _, _) => failure = exception,
+                _ => { },
+                NullLogger.Instance,
+                TimeSpan.FromMilliseconds(25));
+
+            coordinator.RequestReload(notifyOnSuccess: true, autoReload: false);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(failure, Is.Null);
+                Assert.That(succeededConfig, Is.EqualTo(expectedConfig));
+                Assert.That(notifyFlag, Is.True);
+                Assert.That(autoFlag, Is.False);
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
     }
 
     [Test]
@@ -104,34 +112,51 @@ public class ConfigReloadCoordinatorTests
     [Test]
     public void ConfigChange_DebouncesRapidSignalsToSingleReload()
     {
-        var loadCount = 0;
-        using var reloadObserved = new ManualResetEventSlim(false);
+        var tempDirectory = CreateTempDirectory();
+        try
+        {
+            var loadCount = 0;
+            Exception? failure = null;
+            using var reloadObserved = new ManualResetEventSlim(false);
 
-        using var coordinator = new ConfigReloadCoordinator(
-            new ImmediateSynchronizationContext(),
-            () =>
+            using var coordinator = new ConfigReloadCoordinator(
+                new ImmediateSynchronizationContext(),
+                () =>
+                {
+                    Interlocked.Increment(ref loadCount);
+                    return CreateConfig(Path.Combine(tempDirectory, "config.yml"));
+                },
+                (_, _, _) => reloadObserved.Set(),
+                (exception, _, _) =>
+                {
+                    failure = exception;
+                    reloadObserved.Set();
+                },
+                _ => { },
+                NullLogger.Instance,
+                TimeSpan.FromMilliseconds(40));
+
+            var method = typeof(ConfigReloadCoordinator).GetMethod("OnConfigFileChanged", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("Could not access OnConfigFileChanged.");
+            var args = new FileSystemEventArgs(WatcherChangeTypes.Changed, tempDirectory, "config.yml");
+
+            method.Invoke(coordinator, new object[] { this, args });
+            method.Invoke(coordinator, new object[] { this, args });
+            method.Invoke(coordinator, new object[] { this, args });
+
+            Assert.That(reloadObserved.Wait(TimeSpan.FromSeconds(2)), Is.True, "Debounced reload was not observed.");
+            Thread.Sleep(150);
+
+            Assert.Multiple(() =>
             {
-                Interlocked.Increment(ref loadCount);
-                return CreateConfig("C:\\Users\\pablo\\AppData\\Roaming\\LoginShot\\config.yml");
-            },
-            (_, _, _) => reloadObserved.Set(),
-            (_, _, _) => Assert.Fail("Expected successful reload."),
-            _ => { },
-            NullLogger.Instance,
-            TimeSpan.FromMilliseconds(40));
-
-        var method = typeof(ConfigReloadCoordinator).GetMethod("OnConfigFileChanged", BindingFlags.Instance | BindingFlags.NonPublic)
-            ?? throw new InvalidOperationException("Could not access OnConfigFileChanged.");
-        var args = new FileSystemEventArgs(WatcherChangeTypes.Changed, "C:\\temp", "config.yml");
-
-        method.Invoke(coordinator, new object[] { this, args });
-        method.Invoke(coordinator, new object[] { this, args });
-        method.Invoke(coordinator, new object[] { this, args });
-
-        Assert.That(reloadObserved.Wait(TimeSpan.FromSeconds(2)), Is.True, "Debounced reload was not observed.");
-        Thread.Sleep(150);
-
-        Assert.That(loadCount, Is.EqualTo(1));
+                Assert.That(failure, Is.Null);
+                Assert.That(loadCount, Is.EqualTo(1));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
     }
 
     private static LoginShotConfig CreateConfig(string sourcePath)
