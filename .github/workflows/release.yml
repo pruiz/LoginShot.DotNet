@@ -28,11 +28,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-
       - name: Determine release tag
         id: tag
         shell: pwsh
@@ -48,6 +43,19 @@ jobs:
           }
 
           "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Checkout requested tag for manual release
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.tag.outputs.tag }}"
+          git fetch --tags --force
+          git checkout "refs/tags/$tag"
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
       - name: Restore
         run: dotnet restore LoginShot.sln
@@ -137,6 +145,11 @@ jobs:
             throw "Tag '$tag' is not strict semver (expected vMAJOR.MINOR.PATCH)."
           }
 
+          $tagLookupOutput = gh api "repos/${{ github.repository }}/git/ref/tags/$tag" 2>&1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to resolve tag '$tag' in repository. gh output: $tagLookupOutput"
+          }
+
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
       - name: Create or update GitHub release
@@ -159,6 +172,5 @@ jobs:
           } else {
             gh release create $tag @assetPaths `
               --title $tag `
-              --notes "Self-contained single-file Windows builds for development/testing.\n\nThese artifacts are unsigned and rely on .NET single-file native extraction at runtime (OpenCV native binaries)." `
-              --target "$tag"
+              --notes "Self-contained single-file Windows builds for development/testing.\n\nThese artifacts are unsigned and rely on .NET single-file native extraction at runtime (OpenCV native binaries)."
           }
