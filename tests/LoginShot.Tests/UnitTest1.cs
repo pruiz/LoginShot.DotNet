@@ -116,7 +116,7 @@ public class TaskSchedulerStartupRegistrationServiceTests
         FakeTaskSchedulerClient schedulerClient)
     {
         return new TaskSchedulerStartupRegistrationService(
-            "LoginShot\\StartAfterLogin",
+            "LoginShot.StartAfterLogin",
             "C:\\Tools\\LoginShot\\LoginShot.exe",
             "--startup-trigger=logon",
             "C:\\Users\\pablo\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\LoginShot.lnk",

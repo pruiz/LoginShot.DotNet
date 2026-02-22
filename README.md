@@ -95,7 +95,7 @@ Important:
 
 LoginShot can self-register for user startup from the tray menu using Windows Task Scheduler:
 
-- `Start after login` enabled: app creates/updates task `LoginShot\StartAfterLogin` with an `ONLOGON` trigger.
+- `Start after login` enabled: app creates/updates task `LoginShot.StartAfterLogin` with an `ONLOGON` trigger.
 - `Start after login` disabled: app removes that scheduled task.
 - Task action launches LoginShot with `--startup-trigger=logon`.
 
@@ -221,7 +221,7 @@ If reload fails due to invalid config, LoginShot keeps the current in-memory con
   - Windows Settings -> Privacy & security -> Camera.
   - Ensure camera access is enabled for desktop apps.
 - **Startup toggle does not work**
-  - Verify task `LoginShot\StartAfterLogin` exists in Task Scheduler.
+  - Verify task `LoginShot.StartAfterLogin` exists in Task Scheduler.
   - Confirm task action points to the current executable and includes `--startup-trigger=logon`.
 - **Lock capture missing**
   - In v1 this is best-effort; inspect logs for event timing or camera acquisition failures.

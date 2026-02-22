@@ -251,11 +251,11 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         var executablePath = Application.ExecutablePath;
         var startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
         var legacyShortcutPath = Path.Combine(startupDirectory, "LoginShot.lnk");
-        var schedulerClient = new SchtasksStartupTaskSchedulerClient();
+        var schedulerClient = new TaskSchedulerStartupTaskSchedulerClient();
         var fileSystem = new SystemFileSystem();
 
         return new TaskSchedulerStartupRegistrationService(
-            "LoginShot\\StartAfterLogin",
+            "LoginShot.StartAfterLogin",
             executablePath,
             "--startup-trigger=logon",
             legacyShortcutPath,
