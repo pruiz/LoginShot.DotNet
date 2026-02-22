@@ -7,9 +7,9 @@ namespace LoginShot.App;
 
 internal sealed class LoginShotApplicationContext : ApplicationContext
 {
+    private readonly ContextMenuStrip menu;
     private readonly NotifyIcon trayIcon;
     private readonly ToolStripMenuItem startAfterLoginMenuItem;
-    private bool startAfterLoginEnabled;
 
     public LoginShotApplicationContext()
     {
@@ -19,7 +19,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         };
         startAfterLoginMenuItem.Click += OnStartAfterLoginClicked;
 
-        var menu = new ContextMenuStrip();
+        menu = new ContextMenuStrip();
         menu.Items.Add(new ToolStripMenuItem("Capture now", null, OnCaptureNowClicked));
         menu.Items.Add(new ToolStripMenuItem("Open output folder", null, OnOpenOutputFolderClicked));
         menu.Items.Add(startAfterLoginMenuItem);
@@ -78,13 +78,13 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private void OnStartAfterLoginClicked(object? sender, EventArgs eventArgs)
     {
-        startAfterLoginEnabled = startAfterLoginMenuItem.Checked;
     }
 
     private void OnQuitClicked(object? sender, EventArgs eventArgs)
     {
         trayIcon.Visible = false;
         trayIcon.Dispose();
+        menu.Dispose();
         ExitThread();
     }
 }
