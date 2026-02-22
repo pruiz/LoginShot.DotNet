@@ -86,7 +86,8 @@ public sealed class LoginShotConfigLoader : IConfigLoader
         var capture = defaults.Capture with
         {
             DebounceSeconds = document.Capture?.DebounceSeconds ?? defaults.Capture.DebounceSeconds,
-            Backend = document.Capture?.Backend ?? defaults.Capture.Backend
+            Backend = document.Capture?.Backend ?? defaults.Capture.Backend,
+            CameraIndex = document.Capture?.CameraIndex ?? defaults.Capture.CameraIndex
         };
 
         return defaults with
@@ -134,6 +135,11 @@ public sealed class LoginShotConfigLoader : IConfigLoader
             errors.Add("capture.backend must be either 'opencv' or 'winrt-mediacapture'.");
         }
 
+        if (config.Capture.CameraIndex is < 0)
+        {
+            errors.Add("capture.cameraIndex must be 0 or greater when provided.");
+        }
+
         if (errors.Count > 0)
         {
             throw new ConfigValidationException(string.Join(" ", errors));
@@ -179,5 +185,6 @@ public sealed class LoginShotConfigLoader : IConfigLoader
     {
         public int? DebounceSeconds { get; init; }
         public string? Backend { get; init; }
+        public int? CameraIndex { get; init; }
     }
 }

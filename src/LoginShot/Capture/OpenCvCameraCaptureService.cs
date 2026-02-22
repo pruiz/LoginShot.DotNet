@@ -10,16 +10,17 @@ internal sealed class OpenCvCameraCaptureService : ICameraCaptureService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            using var capture = new VideoCapture(0);
+            var cameraIndex = request.CameraIndex ?? 0;
+            using var capture = new VideoCapture(cameraIndex);
             if (!capture.IsOpened())
             {
-                return Task.FromResult(new CaptureResult(false, null, "Unable to open default camera device.", "camera-index-0"));
+                return Task.FromResult(new CaptureResult(false, null, "Unable to open selected camera device.", $"camera-index-{cameraIndex}"));
             }
 
             using var frame = new Mat();
             if (!capture.Read(frame) || frame.Empty())
             {
-                return Task.FromResult(new CaptureResult(false, null, "Unable to read frame from camera.", "camera-index-0"));
+                return Task.FromResult(new CaptureResult(false, null, "Unable to read frame from camera.", $"camera-index-{cameraIndex}"));
             }
 
             using var processed = ResizeIfNeeded(frame, request.MaxWidth);
@@ -30,7 +31,7 @@ internal sealed class OpenCvCameraCaptureService : ICameraCaptureService
             };
 
             Cv2.ImEncode(".jpg", processed, out var imageBytes, imageParameters);
-            return Task.FromResult(new CaptureResult(true, imageBytes, null, "camera-index-0"));
+            return Task.FromResult(new CaptureResult(true, imageBytes, null, $"camera-index-{cameraIndex}"));
         }
         catch (OperationCanceledException)
         {
@@ -38,7 +39,8 @@ internal sealed class OpenCvCameraCaptureService : ICameraCaptureService
         }
         catch (Exception exception)
         {
-            return Task.FromResult(new CaptureResult(false, null, exception.Message, "camera-index-0"));
+            var cameraIndex = request.CameraIndex ?? 0;
+            return Task.FromResult(new CaptureResult(false, null, exception.Message, $"camera-index-{cameraIndex}"));
         }
     }
 

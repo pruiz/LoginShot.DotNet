@@ -29,11 +29,12 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
             return;
         }
 
-        var cameraCaptureService = CreateCameraCaptureService(config.Capture.Backend);
+        var cameraCaptureService = CaptureBackendFactory.Create(config.Capture.Backend, message => Debug.WriteLine(message));
         var captureRequest = new CaptureRequest(
             EventType: eventType,
             MaxWidth: config.Output.MaxWidth,
-            JpegQuality: config.Output.JpegQuality);
+            JpegQuality: config.Output.JpegQuality,
+            CameraIndex: config.Capture.CameraIndex);
 
         var captureResult = await cameraCaptureService.CaptureOnceAsync(captureRequest, cancellationToken);
         if (!captureResult.Success)
@@ -111,23 +112,5 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
             Id: "LoginShot",
             Version: version,
             Build: "dev");
-    }
-
-    private static ICameraCaptureService CreateCameraCaptureService(string backend)
-    {
-        if (string.Equals(backend, "opencv", StringComparison.OrdinalIgnoreCase))
-        {
-            return new OpenCvCameraCaptureService();
-        }
-
-        if (string.Equals(backend, "winrt-mediacapture", StringComparison.OrdinalIgnoreCase))
-        {
-            // TODO: Implement WinRT MediaCapture backend and select it via capture.backend.
-            Debug.WriteLine("TODO: implement WinRT MediaCapture backend. Falling back to OpenCV.");
-            return new OpenCvCameraCaptureService();
-        }
-
-        Debug.WriteLine($"Unknown capture backend '{backend}'. Falling back to OpenCV.");
-        return new OpenCvCameraCaptureService();
     }
 }

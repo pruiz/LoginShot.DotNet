@@ -109,6 +109,7 @@ ui:
 capture:
   debounceSeconds: 3
   backend: "opencv"   # v1: "opencv" (planned: "winrt-mediacapture")
+  cameraIndex: null    # null = auto/default camera; otherwise 0, 1, 2...
 ```
 
 ## Output Files
@@ -157,6 +158,7 @@ When tray icon is enabled, LoginShot exposes:
 |-----------|-------------|
 | **Capture now** | Take a snapshot immediately (`manual` event) |
 | **Open output folder** | Open configured output directory in Explorer |
+| **Camera** | Select camera index (`Auto`, `Camera 0`, `Camera 1`, ...) and verify selection |
 | **Start after login** | Toggle startup task registration in Task Scheduler |
 | **Reload config** | Re-read YAML config without full restart |
 | **Generate sample config** | Write sample `config.yml` in `%APPDATA%\\LoginShot\\` (no overwrite) |
@@ -169,7 +171,8 @@ If reload fails due to invalid config, LoginShot keeps the current in-memory con
 - `logon` and `unlock` captures are expected behavior when events are delivered and camera is available.
 - `logon` startup trigger is wired from scheduler launch (`--startup-trigger=logon`).
 - session lock/unlock signals are routed through per-event-type debounce (`unlock` and `lock` are debounced independently).
-- capture dispatch currently writes attempt sidecars; camera image capture implementation is pending follow-up.
+- capture dispatch attempts real camera capture using OpenCV and persists success/failure sidecars.
+- camera selection is currently index-based (`capture.cameraIndex`); friendly camera names are a planned future improvement.
 - `lock` capture is **best-effort** in v1. Lock transitions can be timing-sensitive and camera access may fail depending on device/policy state.
 - Failures should be logged with context and must not crash the app.
 
@@ -190,10 +193,7 @@ If reload fails due to invalid config, LoginShot keeps the current in-memory con
 
 - v1: local snapshots (`logon`/`unlock`/`lock`), YAML config, JSON sidecar metadata, tray UI, startup toggle
 - v1.x: camera selection improvements
-  - enumerate all available cameras
-  - tray submenu to select active camera
-  - `Verify camera` action to test selected device
-  - auto-update config when camera selection changes from tray
+  - improve friendly camera name support (currently index-based)
 - future: optional Windows Service mode with companion tray UI
   - potential benefits: stronger startup reliability, reduced dependence on user startup folder, clearer long-running process management
   - tradeoffs to evaluate: session boundary complexity, camera access under service context, install/admin requirements

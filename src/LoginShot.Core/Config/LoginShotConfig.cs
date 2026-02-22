@@ -16,4 +16,4 @@ public sealed record MetadataConfig(bool WriteSidecar);
 
 public sealed record UiConfig(bool TrayIcon, bool StartAfterLogin);
 
-public sealed record CaptureConfig(int DebounceSeconds, string Backend);
+public sealed record CaptureConfig(int DebounceSeconds, string Backend, int? CameraIndex);
