@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Detect .NET projects
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          project_files="$(find . -type f \( -name '*.sln' -o -name '*.csproj' \) -not -path './.git/*')"
+          if [ -z "$project_files" ]; then
+            echo "No .NET solution/project files found yet. Bootstrap check passing."
+            echo "has_project=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Detected .NET files:"
+            echo "$project_files"
+            echo "has_project=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore
+        if: steps.detect.outputs.has_project == 'true'
+        run: dotnet restore
+
+      - name: Build
+        if: steps.detect.outputs.has_project == 'true'
+        run: dotnet build --no-restore
+
+      - name: Test
+        if: steps.detect.outputs.has_project == 'true'
+        run: dotnet test --no-build
