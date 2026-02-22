@@ -52,6 +52,11 @@ Keep v1 local-only: no cloud APIs, no face recognition.
     - `Config/` (load/parse/defaults/path expansion)
     - `Storage/` (filenaming, atomic writes, sidecar JSON)
     - `Util/` (debounce, clock/time helpers, logging helpers)
+  - `LoginShot.Core/`
+    - `Config/` (typed config model, parsing, defaults, validation)
+    - `Storage/` (filenaming + atomic persistence contracts)
+    - `Triggers/` (event models, debounce/router logic)
+    - `Startup/` (startup task registration contracts/services)
 - `tests/`
   - `LoginShot.Tests/`
 
@@ -80,7 +85,8 @@ Agents may scaffold this structure as needed.
 - Read from (first found wins):
   1. `%USERPROFILE%\.config\LoginShot\config.yml`
   2. `%APPDATA%\LoginShot\config.yml`
-- Expand `%USERPROFILE%` and `%APPDATA%`.
+- Expand `%USERPROFILE%`, `%APPDATA%`, and `%LOCALAPPDATA%`.
+- Normalize configured Windows path separators as needed (support `\` and `/` in YAML path values).
 - Provide safe defaults.
 - Validate config and fail with clear diagnostics.
 
@@ -89,10 +95,13 @@ Agents may scaffold this structure as needed.
 - If enabled, include:
   - `Capture now`
   - `Open output folder`
+  - `Camera` (index selection + verify action)
   - `Start after login` (startup task toggle)
+  - `Edit config`
   - `Reload config`
   - `Generate sample config`
   - `Quit`
+- Auto-reload config when file changes are detected (with debounce) and notify via tray balloon.
 
 ## Build / Lint / Test Commands (keep updated)
 
@@ -169,9 +178,12 @@ If lint tools are not configured, follow existing style in touched files and avo
 - Prioritize unit tests for:
   - Config parsing + defaults
   - Path expansion
+  - Path separator normalization for Windows config paths
   - Filename formatting
   - Debounce logic
   - Startup task registration/unregistration
+  - Config auto-reload behavior and invalid-reload fallback semantics
+  - Logging config and retention behavior
   - Metadata sidecar generation
 - Prefer deterministic tests with mocks/fakes for camera and clock.
 - Add integration/dev harness only when needed (e.g., debug trigger).
@@ -259,6 +271,7 @@ None present at time of writing. If `.cursorrules`, `.cursor/rules/`, or `.githu
 - Session lock/unlock signals may arrive in bursts; use debounce and event deduplication.
 - `lock` capture is best-effort in v1 due to timing and camera availability constraints.
 - Startup task action can drift if executable path changes; keep tray toggle idempotent and repair task registration when needed.
+- Some environments enforce Task Scheduler restrictions; per-user startup tasks can still fail due to local policy/access constraints.
 - Keep behavior transparent and auditable.
 
 ## Out of Scope (v1), possible future
@@ -268,4 +281,5 @@ None present at time of writing. If `.cursorrules`, `.cursor/rules/`, or `.githu
 - Face recognition or identity classification
 - Retention/deletion policy automation
 - Windows Service runtime mode with optional tray companion
-- Multi-camera selection UX (tray submenu), camera verification action, and auto-persisted camera choice in config
+- Friendly camera-name mapping/selection (current v1 uses index-based camera selection)
+- Native WinRT `MediaCapture` backend implementation as configurable alternative to OpenCV
