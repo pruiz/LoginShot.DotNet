@@ -18,7 +18,7 @@ internal static class Program
 
         try
         {
-            Application.Run(new LoginShotApplicationContext());
+            Application.Run(new LoginShotApplicationContext(triggerDispatcher));
         }
         catch (ConfigValidationException exception)
         {
