@@ -13,7 +13,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly ToolStripMenuItem startAfterLoginMenuItem;
     private readonly IStartupRegistrationService startupRegistrationService;
 
-    public LoginShotApplicationContext(bool launchFromStartupLogon)
+    public LoginShotApplicationContext()
     {
         startupRegistrationService = CreateStartupRegistrationService();
 
@@ -41,11 +41,6 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             ContextMenuStrip = menu,
             Visible = true
         };
-
-        if (launchFromStartupLogon)
-        {
-            HandleStartupLogonTrigger();
-        }
     }
 
     private static void OnCaptureNowClicked(object? sender, EventArgs eventArgs)
@@ -136,9 +131,4 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             fileSystem);
     }
 
-    private static void HandleStartupLogonTrigger()
-    {
-        Debug.WriteLine("Startup logon trigger received.");
-        // TODO: Route startup logon trigger to the capture pipeline.
-    }
 }

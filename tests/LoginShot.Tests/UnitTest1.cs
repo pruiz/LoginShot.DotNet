@@ -199,3 +199,45 @@ public class AppLaunchTriggerParserTests
         Assert.That(result, Is.False);
     }
 }
+
+public class StartupLogonLaunchCoordinatorTests
+{
+    [Test]
+    public async Task DispatchStartupLogonTriggerAsync_WhenStartupArgumentPresent_DispatchesLogonOnce()
+    {
+        var dispatcher = new FakeTriggerDispatcher();
+        var coordinator = new StartupLogonLaunchCoordinator(dispatcher);
+
+        await coordinator.DispatchStartupLogonTriggerAsync(new[] { "--startup-trigger=logon" });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dispatcher.DispatchCount, Is.EqualTo(1));
+            Assert.That(dispatcher.LastEventType, Is.EqualTo(SessionEventType.Logon));
+        });
+    }
+
+    [Test]
+    public async Task DispatchStartupLogonTriggerAsync_WhenStartupArgumentMissing_DoesNotDispatch()
+    {
+        var dispatcher = new FakeTriggerDispatcher();
+        var coordinator = new StartupLogonLaunchCoordinator(dispatcher);
+
+        await coordinator.DispatchStartupLogonTriggerAsync(new[] { "--manual" });
+
+        Assert.That(dispatcher.DispatchCount, Is.EqualTo(0));
+    }
+
+    private sealed class FakeTriggerDispatcher : ITriggerDispatcher
+    {
+        public int DispatchCount { get; private set; }
+        public SessionEventType? LastEventType { get; private set; }
+
+        public Task DispatchAsync(SessionEventType eventType, CancellationToken cancellationToken = default)
+        {
+            DispatchCount++;
+            LastEventType = eventType;
+            return Task.CompletedTask;
+        }
+    }
+}

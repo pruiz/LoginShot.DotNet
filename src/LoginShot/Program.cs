@@ -1,5 +1,6 @@
 using LoginShot.App;
 using LoginShot.AppLaunch;
+using LoginShot.Triggers;
 
 namespace LoginShot;
 
@@ -10,7 +11,10 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
 
-        var launchFromStartupLogon = AppLaunchTriggerParser.IsStartupLogonLaunch(args);
-        Application.Run(new LoginShotApplicationContext(launchFromStartupLogon));
+        var triggerDispatcher = new StartupTriggerDispatcher();
+        var startupCoordinator = new StartupLogonLaunchCoordinator(triggerDispatcher);
+        startupCoordinator.DispatchStartupLogonTriggerAsync(args).GetAwaiter().GetResult();
+
+        Application.Run(new LoginShotApplicationContext());
     }
 }
