@@ -47,4 +47,9 @@ public sealed class ConfigPathResolver
             .Replace("%APPDATA%", appDataPath, StringComparison.OrdinalIgnoreCase)
             .Replace("%LOCALAPPDATA%", localAppDataPath, StringComparison.OrdinalIgnoreCase);
     }
+
+    public string NormalizeWindowsPathSeparators(string value)
+    {
+        return value.Replace('/', '\\');
+    }
 }

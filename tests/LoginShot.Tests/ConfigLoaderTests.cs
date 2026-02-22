@@ -81,6 +81,27 @@ public class LoginShotConfigLoaderTests
     }
 
     [Test]
+    public void Load_WhenDirectoriesUseForwardSlashes_NormalizesToWindowsSeparators()
+    {
+        var provider = new FakeConfigFileProvider();
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+        provider.Files[resolver.GetSearchPaths()[0]] =
+            "output:\n" +
+            "  directory: \"C:/Users/pablo/Pictures/LoginShot\"\n" +
+            "logging:\n" +
+            "  directory: \"%LOCALAPPDATA%/LoginShot/logs\"\n";
+        var loader = new LoginShotConfigLoader(resolver, provider);
+
+        var config = loader.Load();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.Output.Directory, Is.EqualTo("C:\\Users\\pablo\\Pictures\\LoginShot"));
+            Assert.That(config.Logging.Directory, Is.EqualTo("C:\\Users\\pablo\\AppData\\Local\\LoginShot\\logs"));
+        });
+    }
+
+    [Test]
     public void Load_WhenFormatInvalid_ThrowsValidationException()
     {
         var provider = new FakeConfigFileProvider();
