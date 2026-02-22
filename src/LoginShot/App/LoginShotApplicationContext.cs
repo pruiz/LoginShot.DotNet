@@ -494,7 +494,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             configReloadTimer = new System.Threading.Timer(_ =>
             {
                 uiContext.Post(_ => ReloadConfiguration(notifyOnSuccess: true, autoReload: true), null);
-            }, null, TimeSpan.FromMilliseconds(750), Timeout.InfiniteTimeSpan);
+            }, null, TimeSpan.FromMilliseconds(1200), Timeout.InfiniteTimeSpan);
         }
     }
 

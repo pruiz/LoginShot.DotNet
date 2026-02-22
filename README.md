@@ -206,8 +206,6 @@ When tray icon is enabled, LoginShot exposes:
 
 When config file changes are detected, LoginShot attempts automatic reload. Successful reloads and reload errors are shown via tray balloon notifications. If a changed config is invalid, LoginShot keeps the previous valid in-memory configuration.
 
-If reload fails due to invalid config, LoginShot keeps the current in-memory config and shows an error.
-
 ## Trigger Reliability Notes
 
 - `logon` and `unlock` captures are expected behavior when events are delivered and camera is available.
