@@ -48,7 +48,6 @@ internal sealed class DailyFileLoggerProvider : ILoggerProvider
 
             EnsureWriter(timestamp);
             writer!.WriteLine(line);
-            writer.Flush();
         }
     }
 
