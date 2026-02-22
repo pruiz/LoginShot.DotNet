@@ -67,7 +67,8 @@ internal sealed class TaskSchedulerStartupTaskSchedulerClient : IStartupTaskSche
         try
         {
             using var taskService = new TaskService();
-            if (taskService.GetTask(taskName) is null)
+            using var task = taskService.GetTask(taskName);
+            if (task is null)
             {
                 return;
             }
