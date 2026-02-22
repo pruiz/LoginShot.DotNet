@@ -2,7 +2,14 @@ using LoginShot.Triggers;
 
 namespace LoginShot.Capture;
 
-internal sealed record CaptureRequest(SessionEventType EventType, int? MaxWidth, double JpegQuality, int? CameraIndex);
+internal sealed record CaptureRequest(
+    SessionEventType EventType,
+    int? MaxWidth,
+    double JpegQuality,
+    int? CameraIndex,
+    bool WatermarkEnabled,
+    string WatermarkFormat,
+    string Hostname);
 
 internal interface ICameraCaptureService
 {

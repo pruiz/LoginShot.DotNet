@@ -53,6 +53,8 @@ public class LoginShotConfigLoaderTests
             Assert.That(config.Logging.Directory, Is.EqualTo(Path.Combine("C:\\Users\\pablo\\AppData\\Local", "LoginShot", "logs")));
             Assert.That(config.Logging.RetentionDays, Is.EqualTo(14));
             Assert.That(config.Logging.CleanupIntervalHours, Is.EqualTo(24));
+            Assert.That(config.Watermark.Enabled, Is.True);
+            Assert.That(config.Watermark.Format, Is.EqualTo("yyyy-MM-dd HH:mm:ss zzz"));
         });
     }
 
@@ -98,6 +100,26 @@ public class LoginShotConfigLoaderTests
         {
             Assert.That(config.Output.Directory, Is.EqualTo("C:\\Users\\pablo\\Pictures\\LoginShot"));
             Assert.That(config.Logging.Directory, Is.EqualTo("C:\\Users\\pablo\\AppData\\Local\\LoginShot\\logs"));
+        });
+    }
+
+    [Test]
+    public void Load_WhenWatermarkOverridesSpecified_UsesConfiguredValues()
+    {
+        var provider = new FakeConfigFileProvider();
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+        provider.Files[resolver.GetSearchPaths()[0]] =
+            "watermark:\n" +
+            "  enabled: false\n" +
+            "  format: \"yyyy/MM/dd HH:mm:ss zzz\"\n";
+        var loader = new LoginShotConfigLoader(resolver, provider);
+
+        var config = loader.Load();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(config.Watermark.Enabled, Is.False);
+            Assert.That(config.Watermark.Format, Is.EqualTo("yyyy/MM/dd HH:mm:ss zzz"));
         });
     }
 
@@ -202,6 +224,21 @@ public class LoginShotConfigLoaderTests
         var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
 
         Assert.That(exception!.Message, Does.Contain("logging.cleanupIntervalHours must be 1 or greater."));
+    }
+
+    [Test]
+    public void Load_WhenWatermarkFormatEmpty_ThrowsValidationException()
+    {
+        var provider = new FakeConfigFileProvider();
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+        provider.Files[resolver.GetSearchPaths()[0]] =
+            "watermark:\n" +
+            "  format: \"\"\n";
+        var loader = new LoginShotConfigLoader(resolver, provider);
+
+        var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
+
+        Assert.That(exception!.Message, Does.Contain("watermark.format must not be empty."));
     }
 
 }

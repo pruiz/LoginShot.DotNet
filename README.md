@@ -147,9 +147,14 @@ logging:
   directory: "%LOCALAPPDATA%\\LoginShot\\logs"
   retentionDays: 14
   cleanupIntervalHours: 24
+
+watermark:
+  enabled: true
+  format: "yyyy-MM-dd HH:mm:ss zzz"
 ```
 
 Logs are written daily as `loginshot-YYYY-MM-DD.log` in `logging.directory`. LoginShot cleans up old log files at startup and periodically at `cleanupIntervalHours`, keeping files newer than `retentionDays`.
+When enabled, watermark text is rendered at the bottom-right of captured images and includes hostname plus timestamp formatted using `watermark.format`.
 
 ## Output Files
 

@@ -15,6 +15,7 @@ public static class LoginShotConfigDefaults
             new UiConfig(true, false),
             new CaptureConfig(3, "opencv", null),
             new LoggingConfig(Path.Combine(localAppDataPath, "LoginShot", "logs"), 14, 24),
+            new WatermarkConfig(true, "yyyy-MM-dd HH:mm:ss zzz"),
             SourcePath: null);
     }
 }
