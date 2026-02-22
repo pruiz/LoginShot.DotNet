@@ -46,11 +46,13 @@ public sealed class LoginShotConfigLoader : IConfigLoader
         {
             Output = config.Output with
             {
-                Directory = pathResolver.ExpandKnownVariables(config.Output.Directory)
+                Directory = pathResolver.NormalizeWindowsPathSeparators(
+                    pathResolver.ExpandKnownVariables(config.Output.Directory))
             },
             Logging = config.Logging with
             {
-                Directory = pathResolver.ExpandKnownVariables(config.Logging.Directory)
+                Directory = pathResolver.NormalizeWindowsPathSeparators(
+                    pathResolver.ExpandKnownVariables(config.Logging.Directory))
             },
             SourcePath = resolvedPath
         };
