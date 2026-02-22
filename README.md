@@ -2,6 +2,8 @@
 
 LoginShot is a Windows background tray app that captures a webcam snapshot when your user session reaches key states and stores the image plus metadata in a configurable local folder.
 
+This aims to be the windows counterpart to https://github.com/pruiz/LoginShot. (Which was infact a PoC of an original idea by @aramosf)
+
 v1 trigger events:
 - `logon` (app starts after user login)
 - `unlock` (session becomes active/unlocked)
