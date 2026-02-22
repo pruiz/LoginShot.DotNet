@@ -123,14 +123,18 @@ If enabled, sidecar metadata JSON is also written with the same basename:
 
 - `2026-02-22T12-15-30-lock.json`
 
+If camera capture fails, LoginShot still writes a failure sidecar with the same basename schema (no image file), and logs the failure.
+
 ### Sidecar JSON schema (draft)
 ```json
 {
   "timestamp": "2026-02-22T12:15:30.123Z",
   "event": "lock",
+  "status": "success",
   "hostname": "WORKSTATION-01",
   "username": "pablo",
   "outputPath": "C:\\Users\\pablo\\Pictures\\LoginShot\\2026-02-22T12-15-30-lock.jpg",
+  "failure": null,
   "app": {
     "id": "LoginShot",
     "version": "0.1.0",
@@ -162,7 +166,7 @@ If reload fails due to invalid config, LoginShot keeps the current in-memory con
 - `logon` and `unlock` captures are expected behavior when events are delivered and camera is available.
 - `logon` startup trigger is wired from scheduler launch (`--startup-trigger=logon`).
 - session lock/unlock signals are routed through per-event-type debounce (`unlock` and `lock` are debounced independently).
-- TODO: route startup `logon` trigger to the capture pipeline (follow-up task).
+- capture dispatch currently writes attempt sidecars; camera image capture implementation is pending follow-up.
 - `lock` capture is **best-effort** in v1. Lock transitions can be timing-sensitive and camera access may fail depending on device/policy state.
 - Failures should be logged with context and must not crash the app.
 
