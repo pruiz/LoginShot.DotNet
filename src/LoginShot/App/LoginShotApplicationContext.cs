@@ -152,7 +152,10 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
                 EventType: SessionEventType.Manual,
                 MaxWidth: currentConfig.Output.MaxWidth,
                 JpegQuality: currentConfig.Output.JpegQuality,
-                CameraIndex: currentConfig.Capture.CameraIndex);
+                CameraIndex: currentConfig.Capture.CameraIndex,
+                WatermarkEnabled: currentConfig.Watermark.Enabled,
+                WatermarkFormat: currentConfig.Watermark.Format,
+                Hostname: Environment.MachineName);
 
             var result = await captureService.CaptureOnceAsync(request, CancellationToken.None);
             if (result.Success)

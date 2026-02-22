@@ -36,7 +36,10 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
             EventType: eventType,
             MaxWidth: config.Output.MaxWidth,
             JpegQuality: config.Output.JpegQuality,
-            CameraIndex: config.Capture.CameraIndex);
+            CameraIndex: config.Capture.CameraIndex,
+            WatermarkEnabled: config.Watermark.Enabled,
+            WatermarkFormat: config.Watermark.Format,
+            Hostname: Environment.MachineName);
 
         var captureResult = await cameraCaptureService.CaptureOnceAsync(captureRequest, cancellationToken);
         if (!captureResult.Success)

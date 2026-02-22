@@ -103,6 +103,12 @@ public sealed class LoginShotConfigLoader : IConfigLoader
             CleanupIntervalHours = document.Logging?.CleanupIntervalHours ?? defaults.Logging.CleanupIntervalHours
         };
 
+        var watermark = defaults.Watermark with
+        {
+            Enabled = document.Watermark?.Enabled ?? defaults.Watermark.Enabled,
+            Format = document.Watermark?.Format ?? defaults.Watermark.Format
+        };
+
         return defaults with
         {
             Output = output,
@@ -110,7 +116,8 @@ public sealed class LoginShotConfigLoader : IConfigLoader
             Metadata = metadata,
             Ui = ui,
             Capture = capture,
-            Logging = logging
+            Logging = logging,
+            Watermark = watermark
         };
     }
 
@@ -169,6 +176,11 @@ public sealed class LoginShotConfigLoader : IConfigLoader
             errors.Add("logging.cleanupIntervalHours must be 1 or greater.");
         }
 
+        if (string.IsNullOrWhiteSpace(config.Watermark.Format))
+        {
+            errors.Add("watermark.format must not be empty.");
+        }
+
         if (errors.Count > 0)
         {
             throw new ConfigValidationException(string.Join(" ", errors));
@@ -183,6 +195,7 @@ public sealed class LoginShotConfigLoader : IConfigLoader
         public UiDocument? Ui { get; init; }
         public CaptureDocument? Capture { get; init; }
         public LoggingDocument? Logging { get; init; }
+        public WatermarkDocument? Watermark { get; init; }
     }
 
     private sealed record OutputDocument
@@ -223,5 +236,11 @@ public sealed class LoginShotConfigLoader : IConfigLoader
         public string? Directory { get; init; }
         public int? RetentionDays { get; init; }
         public int? CleanupIntervalHours { get; init; }
+    }
+
+    private sealed record WatermarkDocument
+    {
+        public bool? Enabled { get; init; }
+        public string? Format { get; init; }
     }
 }
