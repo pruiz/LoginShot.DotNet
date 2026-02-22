@@ -159,5 +159,5 @@ jobs:
             gh release create $tag @assetPaths `
               --title $tag `
               --notes "Self-contained single-file Windows builds for development/testing.\n\nThese artifacts are unsigned and rely on .NET single-file native extraction at runtime (OpenCV native binaries)." `
-              --target $env:GITHUB_SHA
+              --target "$tag"
           }
