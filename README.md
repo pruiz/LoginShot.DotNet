@@ -142,7 +142,14 @@ capture:
   debounceSeconds: 3
   backend: "opencv"   # v1: "opencv" (planned: "winrt-mediacapture")
   cameraIndex: null    # null = auto/default camera; otherwise 0, 1, 2...
+
+logging:
+  directory: "%LOCALAPPDATA%\\LoginShot\\logs"
+  retentionDays: 14
+  cleanupIntervalHours: 24
 ```
+
+Logs are written daily as `loginshot-YYYY-MM-DD.log` in `logging.directory`. LoginShot cleans up old log files at startup and periodically at `cleanupIntervalHours`, keeping files newer than `retentionDays`.
 
 ## Output Files
 
@@ -220,6 +227,9 @@ If reload fails due to invalid config, LoginShot keeps the current in-memory con
   - In v1 this is best-effort; inspect logs for event timing or camera acquisition failures.
 - **Config not loading**
   - Check YAML syntax and verify one of the expected config paths exists.
+- **Where are logs?**
+  - Default path is `%LOCALAPPDATA%\LoginShot\logs`.
+  - Verify `logging.directory` in config if you changed it.
 
 ## Roadmap
 
@@ -229,6 +239,7 @@ If reload fails due to invalid config, LoginShot keeps the current in-memory con
 - future: optional Windows Service mode with companion tray UI
   - potential benefits: stronger startup reliability, reduced dependence on user startup folder, clearer long-running process management
   - tradeoffs to evaluate: session boundary complexity, camera access under service context, install/admin requirements
+- future: evaluate migrating from custom file logger to a battle-tested logging sink (for example Serilog), still configured programmatically
 
 ## Security Notes
 

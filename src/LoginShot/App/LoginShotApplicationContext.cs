@@ -4,6 +4,7 @@ using LoginShot.Capture;
 using LoginShot.Config;
 using LoginShot.Startup;
 using LoginShot.Triggers;
+using Microsoft.Extensions.Logging;
 
 namespace LoginShot.App;
 
@@ -16,12 +17,14 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly NotifyIcon trayIcon;
     private readonly ToolStripMenuItem cameraMenuItem;
     private readonly ToolStripMenuItem startAfterLoginMenuItem;
+    private readonly ITriggerDispatcher triggerDispatcher;
     private readonly IStartupRegistrationService startupRegistrationService;
     private readonly IConfigLoader configLoader;
     private readonly IConfigWriter configWriter;
     private readonly ICameraDeviceEnumerator cameraDeviceEnumerator;
     private readonly ISessionEventSource sessionEventSource;
     private readonly SessionEventRouter sessionEventRouter;
+    private readonly ILogger<LoginShotApplicationContext> logger;
     private readonly SynchronizationContext uiContext;
     private readonly object cameraRefreshLock = new();
     private IReadOnlyList<int> cachedCameraIndexes = Array.Empty<int>();
@@ -29,15 +32,23 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private bool isRefreshingCameraIndexes;
     private LoginShotConfig currentConfig;
 
-    public LoginShotApplicationContext(ITriggerDispatcher triggerDispatcher)
+    public LoginShotApplicationContext(
+        ITriggerDispatcher triggerDispatcher,
+        IConfigLoader configLoader,
+        IConfigWriter configWriter,
+        ICameraDeviceEnumerator cameraDeviceEnumerator,
+        ILogger<LoginShotApplicationContext> logger,
+        ILogger<SessionEventRouter> sessionEventRouterLogger)
     {
         uiContext = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
-        configLoader = CreateConfigLoader();
-        configWriter = new YamlConfigWriter();
-        cameraDeviceEnumerator = new OpenCvCameraDeviceEnumerator();
-        currentConfig = LoadConfigOnStartup(configLoader);
+        this.triggerDispatcher = triggerDispatcher;
+        this.configLoader = configLoader;
+        this.configWriter = configWriter;
+        this.cameraDeviceEnumerator = cameraDeviceEnumerator;
+        this.logger = logger;
+        currentConfig = LoadConfigOnStartup(this.configLoader);
 
-        sessionEventRouter = CreateSessionEventRouter(triggerDispatcher, currentConfig);
+        sessionEventRouter = CreateSessionEventRouter(triggerDispatcher, currentConfig, sessionEventRouterLogger);
         sessionEventSource = new WindowsSessionEventSource();
         sessionEventSource.SessionEventReceived += OnSessionEventReceived;
 
@@ -75,8 +86,22 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         RefreshCameraMenuItems();
     }
 
-    private static void OnCaptureNowClicked(object? sender, EventArgs eventArgs)
+    private async void OnCaptureNowClicked(object? sender, EventArgs eventArgs)
     {
+        try
+        {
+            await triggerDispatcher.DispatchAsync(SessionEventType.Manual, CancellationToken.None);
+            logger.LogInformation("Manual capture requested from tray menu");
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Manual capture dispatch failed");
+            MessageBox.Show(
+                $"Manual capture failed: {exception.Message}",
+                "LoginShot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 
     private void OnCameraMenuOpening(object? sender, EventArgs eventArgs)
@@ -90,9 +115,11 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         {
             currentConfig = configLoader.Load();
             sessionEventRouter.UpdateOptions(CreateTriggerHandlingOptions(currentConfig));
+            logger.LogInformation("Configuration reloaded from {ConfigPath}", currentConfig.SourcePath ?? "defaults");
         }
         catch (Exception exception)
         {
+            logger.LogWarning(exception, "Failed to reload configuration");
             MessageBox.Show(
                 $"Failed to reload config: {exception.Message}",
                 "LoginShot",
@@ -105,7 +132,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     {
         try
         {
-            var captureService = CaptureBackendFactory.Create(currentConfig.Capture.Backend, message => Debug.WriteLine(message));
+            var captureService = CaptureBackendFactory.Create(currentConfig.Capture.Backend, message => logger.LogWarning("{Message}", message));
             var request = new CaptureRequest(
                 EventType: SessionEventType.Manual,
                 MaxWidth: currentConfig.Output.MaxWidth,
@@ -115,6 +142,10 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             var result = await captureService.CaptureOnceAsync(request, CancellationToken.None);
             if (result.Success)
             {
+                logger.LogInformation(
+                    "Camera verification succeeded for backend {Backend} and cameraIndex {CameraIndex}",
+                    currentConfig.Capture.Backend,
+                    currentConfig.Capture.CameraIndex);
                 MessageBox.Show(
                     "Camera verification succeeded.",
                     "LoginShot",
@@ -123,6 +154,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
                 return;
             }
 
+            logger.LogWarning("Camera verification failed: {ErrorMessage}", result.ErrorMessage);
             MessageBox.Show(
                 $"Camera verification failed: {result.ErrorMessage}",
                 "LoginShot",
@@ -131,6 +163,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         }
         catch (Exception exception)
         {
+            logger.LogWarning(exception, "Camera verification raised an exception");
             MessageBox.Show(
                 $"Camera verification failed: {exception.Message}",
                 "LoginShot",
@@ -143,6 +176,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     {
         var outputDirectory = currentConfig.Output.Directory;
         Directory.CreateDirectory(outputDirectory);
+        logger.LogInformation("Opening output folder {OutputDirectory}", outputDirectory);
 
         var processStartInfo = new ProcessStartInfo
         {
@@ -184,6 +218,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         }
         catch (Exception exception)
         {
+            logger.LogWarning(exception, "Failed to update startup registration setting");
             MessageBox.Show(
                 $"Failed to update startup setting: {exception.Message}",
                 "LoginShot",
@@ -207,6 +242,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private void OnSessionEventReceived(object? sender, SessionEventType eventType)
     {
+        logger.LogInformation("Received session event {EventType}", eventType);
         _ = sessionEventRouter.HandleEventAsync(eventType);
     }
 
@@ -225,15 +261,6 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             legacyShortcutPath,
             schedulerClient,
             fileSystem);
-    }
-
-    private static IConfigLoader CreateConfigLoader()
-    {
-        var userProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var fileProvider = new SystemConfigFileProvider();
-        var pathResolver = new ConfigPathResolver(userProfilePath, appDataPath, fileProvider);
-        return new LoginShotConfigLoader(pathResolver, fileProvider);
     }
 
     private void RefreshCameraMenuItems()
@@ -327,8 +354,9 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             {
                 indexes = cameraDeviceEnumerator.EnumerateIndexes(CameraIndexProbeCount);
             }
-            catch
+            catch (Exception exception)
             {
+                logger.LogWarning(exception, "Failed to enumerate camera indexes");
                 indexes = Array.Empty<int>();
             }
 
@@ -358,10 +386,12 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         {
             var savedPath = configWriter.Save(currentConfig, currentConfig.SourcePath);
             currentConfig = currentConfig with { SourcePath = savedPath };
+            logger.LogInformation("Updated camera selection to {CameraIndex} and saved config to {ConfigPath}", cameraIndex, savedPath);
         }
         catch (Exception exception)
         {
             currentConfig = previousConfig;
+            logger.LogWarning(exception, "Failed to save camera selection {CameraIndex}", cameraIndex);
             MessageBox.Show(
                 $"Failed to save camera selection: {exception.Message}",
                 "LoginShot",
@@ -377,12 +407,12 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         return loader.Load();
     }
 
-    private static SessionEventRouter CreateSessionEventRouter(ITriggerDispatcher triggerDispatcher, LoginShotConfig config)
+    private static SessionEventRouter CreateSessionEventRouter(ITriggerDispatcher triggerDispatcher, LoginShotConfig config, ILogger<SessionEventRouter> logger)
     {
         var debouncer = new PerEventTypeDebouncer();
         var timeProvider = new SystemEventTimeProvider();
         var options = CreateTriggerHandlingOptions(config);
-        return new SessionEventRouter(triggerDispatcher, debouncer, timeProvider, options);
+        return new SessionEventRouter(triggerDispatcher, debouncer, timeProvider, logger, options);
     }
 
     private static TriggerHandlingOptions CreateTriggerHandlingOptions(LoginShotConfig config)

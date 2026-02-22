@@ -24,6 +24,11 @@ internal static class ConfigPaths
         "capture:\n" +
         "  debounceSeconds: 3\n" +
         "  backend: \"opencv\"\n" +
-        "  cameraIndex: null\n";
+        "  cameraIndex: null\n" +
+        "\n" +
+        "logging:\n" +
+        "  directory: \"%LOCALAPPDATA%\\\\LoginShot\\\\logs\"\n" +
+        "  retentionDays: 14\n" +
+        "  cleanupIntervalHours: 24\n";
 
 }
