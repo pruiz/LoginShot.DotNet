@@ -145,9 +145,9 @@ jobs:
             throw "Tag '$tag' is not strict semver (expected vMAJOR.MINOR.PATCH)."
           }
 
-          $null = gh api "repos/${{ github.repository }}/git/ref/tags/$tag" 2>$null
+          $tagLookupOutput = gh api "repos/${{ github.repository }}/git/ref/tags/$tag" 2>&1
           if ($LASTEXITCODE -ne 0) {
-            throw "Tag '$tag' does not exist in repository."
+            throw "Unable to resolve tag '$tag' in repository. gh output: $tagLookupOutput"
           }
 
           "tag=$tag" >> $env:GITHUB_OUTPUT
