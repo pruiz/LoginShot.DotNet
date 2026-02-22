@@ -38,7 +38,7 @@ public sealed class LoginShotConfigLoader : IConfigLoader
         }
         catch (Exception exception)
         {
-            throw new ConfigValidationException($"Failed to parse config '{resolvedPath}': {exception.Message}");
+            throw new ConfigValidationException($"Failed to parse config '{resolvedPath}': {exception.Message}", exception);
         }
 
         config = Merge(config, document ?? new ConfigDocument());

@@ -6,4 +6,9 @@ public sealed class ConfigValidationException : Exception
         : base(message)
     {
     }
+
+    public ConfigValidationException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }
