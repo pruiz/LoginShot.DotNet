@@ -10,6 +10,7 @@ namespace LoginShot.App;
 internal sealed class LoginShotApplicationContext : ApplicationContext
 {
     private const int CameraIndexProbeCount = 10;
+    private static readonly TimeSpan CameraRefreshInterval = TimeSpan.FromSeconds(15);
 
     private readonly ContextMenuStrip menu;
     private readonly NotifyIcon trayIcon;
@@ -21,10 +22,16 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly ICameraDeviceEnumerator cameraDeviceEnumerator;
     private readonly ISessionEventSource sessionEventSource;
     private readonly SessionEventRouter sessionEventRouter;
+    private readonly SynchronizationContext uiContext;
+    private readonly object cameraRefreshLock = new();
+    private IReadOnlyList<int> cachedCameraIndexes = Array.Empty<int>();
+    private DateTimeOffset? lastCameraRefreshUtc;
+    private bool isRefreshingCameraIndexes;
     private LoginShotConfig currentConfig;
 
     public LoginShotApplicationContext(ITriggerDispatcher triggerDispatcher)
     {
+        uiContext = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         configLoader = CreateConfigLoader();
         configWriter = new YamlConfigWriter();
         cameraDeviceEnumerator = new OpenCvCameraDeviceEnumerator();
@@ -231,7 +238,20 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private void RefreshCameraMenuItems()
     {
-        var detectedIndexes = cameraDeviceEnumerator.EnumerateIndexes(CameraIndexProbeCount);
+        var shouldRefresh = ShouldRefreshCameraIndexes();
+        if (shouldRefresh)
+        {
+            StartCameraRefresh();
+        }
+
+        IReadOnlyList<int> detectedIndexes;
+        var refreshing = false;
+        lock (cameraRefreshLock)
+        {
+            detectedIndexes = cachedCameraIndexes;
+            refreshing = isRefreshingCameraIndexes;
+        }
+
         cameraMenuItem.DropDownItems.Clear();
 
         var autoItem = new ToolStripMenuItem("Auto (default)")
@@ -240,6 +260,15 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         };
         autoItem.Click += (_, _) => ApplyCameraSelection(null);
         cameraMenuItem.DropDownItems.Add(autoItem);
+
+        if (refreshing)
+        {
+            cameraMenuItem.DropDownItems.Add(new ToolStripSeparator());
+            cameraMenuItem.DropDownItems.Add(new ToolStripMenuItem("Detecting cameras...")
+            {
+                Enabled = false
+            });
+        }
 
         if (detectedIndexes.Count > 0)
         {
@@ -259,6 +288,59 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
         cameraMenuItem.DropDownItems.Add(new ToolStripSeparator());
         cameraMenuItem.DropDownItems.Add(new ToolStripMenuItem("Verify selected camera", null, OnVerifySelectedCameraClicked));
+    }
+
+    private bool ShouldRefreshCameraIndexes()
+    {
+        lock (cameraRefreshLock)
+        {
+            if (isRefreshingCameraIndexes)
+            {
+                return false;
+            }
+
+            if (lastCameraRefreshUtc is null)
+            {
+                return true;
+            }
+
+            return DateTimeOffset.UtcNow - lastCameraRefreshUtc >= CameraRefreshInterval;
+        }
+    }
+
+    private void StartCameraRefresh()
+    {
+        lock (cameraRefreshLock)
+        {
+            if (isRefreshingCameraIndexes)
+            {
+                return;
+            }
+
+            isRefreshingCameraIndexes = true;
+        }
+
+        _ = Task.Run(() =>
+        {
+            IReadOnlyList<int> indexes;
+            try
+            {
+                indexes = cameraDeviceEnumerator.EnumerateIndexes(CameraIndexProbeCount);
+            }
+            catch
+            {
+                indexes = Array.Empty<int>();
+            }
+
+            lock (cameraRefreshLock)
+            {
+                cachedCameraIndexes = indexes;
+                lastCameraRefreshUtc = DateTimeOffset.UtcNow;
+                isRefreshingCameraIndexes = false;
+            }
+
+            uiContext.Post(_ => RefreshCameraMenuItems(), null);
+        });
     }
 
     private void ApplyCameraSelection(int? cameraIndex)

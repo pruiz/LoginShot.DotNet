@@ -80,7 +80,41 @@ internal sealed class YamlConfigWriter : IConfigWriter
 
     private static string Escape(string value)
     {
-        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        var builder = new StringBuilder(value.Length + 8);
+        foreach (var character in value)
+        {
+            switch (character)
+            {
+                case '\\':
+                    builder.Append("\\\\");
+                    break;
+                case '\"':
+                    builder.Append("\\\"");
+                    break;
+                case '\n':
+                    builder.Append("\\n");
+                    break;
+                case '\r':
+                    builder.Append("\\r");
+                    break;
+                case '\t':
+                    builder.Append("\\t");
+                    break;
+                default:
+                    if (char.IsControl(character))
+                    {
+                        builder.Append("\\u");
+                        builder.Append(((int)character).ToString("x4"));
+                    }
+                    else
+                    {
+                        builder.Append(character);
+                    }
+                    break;
+            }
+        }
+
+        return builder.ToString();
     }
 
     private static string ToYamlBoolean(bool value)
