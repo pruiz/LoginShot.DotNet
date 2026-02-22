@@ -84,6 +84,8 @@ If no config file is found, LoginShot uses safe defaults:
 - **Tray icon:** enabled
 - **Debounce:** 3 seconds
 
+If a config file is found but invalid, LoginShot fails startup with clear diagnostics.
+
 ### YAML example
 ```yaml
 output:
@@ -152,6 +154,8 @@ When tray icon is enabled, LoginShot exposes:
 | **Reload config** | Re-read YAML config without full restart |
 | **Generate sample config** | Write sample `config.yml` in `%APPDATA%\\LoginShot\\` (no overwrite) |
 | **Quit** | Exit LoginShot |
+
+If reload fails due to invalid config, LoginShot keeps the current in-memory config and shows an error.
 
 ## Trigger Reliability Notes
 

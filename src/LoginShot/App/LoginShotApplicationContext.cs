@@ -2,7 +2,6 @@ using System.Diagnostics;
 using System.Drawing;
 using LoginShot.Config;
 using LoginShot.Startup;
-using LoginShot.Storage;
 
 namespace LoginShot.App;
 
@@ -12,9 +11,14 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly NotifyIcon trayIcon;
     private readonly ToolStripMenuItem startAfterLoginMenuItem;
     private readonly IStartupRegistrationService startupRegistrationService;
+    private readonly IConfigLoader configLoader;
+    private LoginShotConfig currentConfig;
 
     public LoginShotApplicationContext()
     {
+        configLoader = CreateConfigLoader();
+        currentConfig = LoadConfigOnStartup(configLoader);
+
         startupRegistrationService = CreateStartupRegistrationService();
 
         startAfterLoginMenuItem = new ToolStripMenuItem("Start after login")
@@ -47,13 +51,25 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     {
     }
 
-    private static void OnReloadConfigClicked(object? sender, EventArgs eventArgs)
+    private void OnReloadConfigClicked(object? sender, EventArgs eventArgs)
     {
+        try
+        {
+            currentConfig = configLoader.Load();
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(
+                $"Failed to reload config: {exception.Message}",
+                "LoginShot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 
-    private static void OnOpenOutputFolderClicked(object? sender, EventArgs eventArgs)
+    private void OnOpenOutputFolderClicked(object? sender, EventArgs eventArgs)
     {
-        var outputDirectory = OutputPathProvider.GetDefaultOutputDirectory();
+        var outputDirectory = currentConfig.Output.Directory;
         Directory.CreateDirectory(outputDirectory);
 
         var processStartInfo = new ProcessStartInfo
@@ -129,6 +145,20 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             legacyShortcutPath,
             schedulerClient,
             fileSystem);
+    }
+
+    private static IConfigLoader CreateConfigLoader()
+    {
+        var userProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var fileProvider = new SystemConfigFileProvider();
+        var pathResolver = new ConfigPathResolver(userProfilePath, appDataPath, fileProvider);
+        return new LoginShotConfigLoader(pathResolver, fileProvider);
+    }
+
+    private static LoginShotConfig LoadConfigOnStartup(IConfigLoader loader)
+    {
+        return loader.Load();
     }
 
 }

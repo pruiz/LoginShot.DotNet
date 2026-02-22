@@ -24,15 +24,4 @@ internal static class ConfigPaths
         "capture:\n" +
         "  debounceSeconds: 3\n";
 
-    public static IReadOnlyList<string> GetSearchPaths()
-    {
-        var userProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-
-        return new[]
-        {
-            Path.Combine(userProfilePath, ".config", "LoginShot", "config.yml"),
-            Path.Combine(appDataPath, "LoginShot", "config.yml")
-        };
-    }
 }

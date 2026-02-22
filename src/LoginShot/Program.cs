@@ -1,5 +1,6 @@
 using LoginShot.App;
 using LoginShot.AppLaunch;
+using LoginShot.Config;
 using LoginShot.Triggers;
 
 namespace LoginShot;
@@ -15,6 +16,17 @@ internal static class Program
         var startupCoordinator = new StartupLogonLaunchCoordinator(triggerDispatcher);
         startupCoordinator.DispatchStartupLogonTriggerAsync(args).GetAwaiter().GetResult();
 
-        Application.Run(new LoginShotApplicationContext());
+        try
+        {
+            Application.Run(new LoginShotApplicationContext());
+        }
+        catch (ConfigValidationException exception)
+        {
+            MessageBox.Show(
+                exception.Message,
+                "LoginShot configuration error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 }
