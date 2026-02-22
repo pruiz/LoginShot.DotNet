@@ -6,6 +6,7 @@ public sealed record LoginShotConfig(
     MetadataConfig Metadata,
     UiConfig Ui,
     CaptureConfig Capture,
+    LoggingConfig Logging,
     string? SourcePath);
 
 public sealed record OutputConfig(string Directory, string Format, int? MaxWidth, double JpegQuality);
@@ -17,3 +18,5 @@ public sealed record MetadataConfig(bool WriteSidecar);
 public sealed record UiConfig(bool TrayIcon, bool StartAfterLogin);
 
 public sealed record CaptureConfig(int DebounceSeconds, string Backend, int? CameraIndex);
+
+public sealed record LoggingConfig(string Directory, int RetentionDays, int CleanupIntervalHours);

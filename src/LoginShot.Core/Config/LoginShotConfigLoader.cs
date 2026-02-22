@@ -22,7 +22,7 @@ public sealed class LoginShotConfigLoader : IConfigLoader
     public LoginShotConfig Load()
     {
         var resolvedPath = pathResolver.ResolveFirstExistingPath();
-        var config = LoginShotConfigDefaults.Create(pathResolver.UserProfilePath);
+        var config = LoginShotConfigDefaults.Create(pathResolver.UserProfilePath, pathResolver.LocalAppDataPath);
 
         if (resolvedPath is null)
         {
@@ -47,6 +47,10 @@ public sealed class LoginShotConfigLoader : IConfigLoader
             Output = config.Output with
             {
                 Directory = pathResolver.ExpandKnownVariables(config.Output.Directory)
+            },
+            Logging = config.Logging with
+            {
+                Directory = pathResolver.ExpandKnownVariables(config.Logging.Directory)
             },
             SourcePath = resolvedPath
         };
@@ -90,13 +94,21 @@ public sealed class LoginShotConfigLoader : IConfigLoader
             CameraIndex = document.Capture?.CameraIndex ?? defaults.Capture.CameraIndex
         };
 
+        var logging = defaults.Logging with
+        {
+            Directory = document.Logging?.Directory ?? defaults.Logging.Directory,
+            RetentionDays = document.Logging?.RetentionDays ?? defaults.Logging.RetentionDays,
+            CleanupIntervalHours = document.Logging?.CleanupIntervalHours ?? defaults.Logging.CleanupIntervalHours
+        };
+
         return defaults with
         {
             Output = output,
             Triggers = triggers,
             Metadata = metadata,
             Ui = ui,
-            Capture = capture
+            Capture = capture,
+            Logging = logging
         };
     }
 
@@ -140,6 +152,21 @@ public sealed class LoginShotConfigLoader : IConfigLoader
             errors.Add("capture.cameraIndex must be 0 or greater when provided.");
         }
 
+        if (string.IsNullOrWhiteSpace(config.Logging.Directory))
+        {
+            errors.Add("logging.directory must not be empty.");
+        }
+
+        if (config.Logging.RetentionDays < 1)
+        {
+            errors.Add("logging.retentionDays must be 1 or greater.");
+        }
+
+        if (config.Logging.CleanupIntervalHours < 1)
+        {
+            errors.Add("logging.cleanupIntervalHours must be 1 or greater.");
+        }
+
         if (errors.Count > 0)
         {
             throw new ConfigValidationException(string.Join(" ", errors));
@@ -153,6 +180,7 @@ public sealed class LoginShotConfigLoader : IConfigLoader
         public MetadataDocument? Metadata { get; init; }
         public UiDocument? Ui { get; init; }
         public CaptureDocument? Capture { get; init; }
+        public LoggingDocument? Logging { get; init; }
     }
 
     private sealed record OutputDocument
@@ -186,5 +214,12 @@ public sealed class LoginShotConfigLoader : IConfigLoader
         public int? DebounceSeconds { get; init; }
         public string? Backend { get; init; }
         public int? CameraIndex { get; init; }
+    }
+
+    private sealed record LoggingDocument
+    {
+        public string? Directory { get; init; }
+        public int? RetentionDays { get; init; }
+        public int? CleanupIntervalHours { get; init; }
     }
 }

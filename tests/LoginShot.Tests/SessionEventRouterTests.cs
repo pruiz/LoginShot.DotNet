@@ -1,4 +1,5 @@
 using LoginShot.Triggers;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace LoginShot.Tests;
 
@@ -100,6 +101,7 @@ public class SessionEventRouterTests
             dispatcher,
             new PerEventTypeDebouncer(),
             clock,
+            NullLogger.Instance,
             new TriggerHandlingOptions(enableUnlock, enableLock, TimeSpan.FromSeconds(debounceSeconds)));
     }
 

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace LoginShot.Triggers;
 
@@ -7,17 +7,20 @@ public sealed class SessionEventRouter
     private readonly ITriggerDispatcher triggerDispatcher;
     private readonly IEventDebouncer eventDebouncer;
     private readonly IEventTimeProvider timeProvider;
+    private readonly ILogger logger;
     private TriggerHandlingOptions options;
 
     public SessionEventRouter(
         ITriggerDispatcher triggerDispatcher,
         IEventDebouncer eventDebouncer,
         IEventTimeProvider timeProvider,
+        ILogger logger,
         TriggerHandlingOptions options)
     {
         this.triggerDispatcher = triggerDispatcher;
         this.eventDebouncer = eventDebouncer;
         this.timeProvider = timeProvider;
+        this.logger = logger;
         this.options = options;
     }
 
@@ -52,11 +55,11 @@ public sealed class SessionEventRouter
         {
             if (eventType == SessionEventType.Lock)
             {
-                Debug.WriteLine($"Best-effort lock dispatch failed: {exception.Message}");
+                logger.LogWarning(exception, "Best-effort lock dispatch failed");
                 return;
             }
 
-            Debug.WriteLine($"Dispatch failed for {eventType}: {exception.Message}");
+            logger.LogWarning(exception, "Dispatch failed for {EventType}", eventType);
         }
     }
 

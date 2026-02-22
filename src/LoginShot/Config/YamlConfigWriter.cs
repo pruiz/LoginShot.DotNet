@@ -54,6 +54,12 @@ internal sealed class YamlConfigWriter : IConfigWriter
         builder.AppendLine($"  debounceSeconds: {config.Capture.DebounceSeconds}");
         builder.AppendLine($"  backend: \"{Escape(config.Capture.Backend)}\"");
         builder.AppendLine($"  cameraIndex: {(config.Capture.CameraIndex is null ? "null" : config.Capture.CameraIndex.Value)}");
+        builder.AppendLine();
+
+        builder.AppendLine("logging:");
+        builder.AppendLine($"  directory: \"{Escape(config.Logging.Directory)}\"");
+        builder.AppendLine($"  retentionDays: {config.Logging.RetentionDays}");
+        builder.AppendLine($"  cleanupIntervalHours: {config.Logging.CleanupIntervalHours}");
 
         return builder.ToString();
     }

@@ -2,7 +2,7 @@ namespace LoginShot.Config;
 
 public static class LoginShotConfigDefaults
 {
-    public static LoginShotConfig Create(string userProfilePath)
+    public static LoginShotConfig Create(string userProfilePath, string localAppDataPath)
     {
         return new LoginShotConfig(
             new OutputConfig(
@@ -14,6 +14,7 @@ public static class LoginShotConfigDefaults
             new MetadataConfig(true),
             new UiConfig(true, false),
             new CaptureConfig(3, "opencv", null),
+            new LoggingConfig(Path.Combine(localAppDataPath, "LoginShot", "logs"), 14, 24),
             SourcePath: null);
     }
 }

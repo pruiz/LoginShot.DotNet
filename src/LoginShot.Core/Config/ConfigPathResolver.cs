@@ -4,16 +4,19 @@ public sealed class ConfigPathResolver
 {
     private readonly string userProfilePath;
     private readonly string appDataPath;
+    private readonly string localAppDataPath;
     private readonly IConfigFileProvider fileProvider;
 
-    public ConfigPathResolver(string userProfilePath, string appDataPath, IConfigFileProvider fileProvider)
+    public ConfigPathResolver(string userProfilePath, string appDataPath, string localAppDataPath, IConfigFileProvider fileProvider)
     {
         this.userProfilePath = userProfilePath;
         this.appDataPath = appDataPath;
+        this.localAppDataPath = localAppDataPath;
         this.fileProvider = fileProvider;
     }
 
     public string UserProfilePath => userProfilePath;
+    public string LocalAppDataPath => localAppDataPath;
 
     public IReadOnlyList<string> GetSearchPaths()
     {
@@ -41,6 +44,7 @@ public sealed class ConfigPathResolver
     {
         return value
             .Replace("%USERPROFILE%", userProfilePath, StringComparison.OrdinalIgnoreCase)
-            .Replace("%APPDATA%", appDataPath, StringComparison.OrdinalIgnoreCase);
+            .Replace("%APPDATA%", appDataPath, StringComparison.OrdinalIgnoreCase)
+            .Replace("%LOCALAPPDATA%", localAppDataPath, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -8,7 +8,7 @@ public class ConfigPathResolverTests
     public void ResolveFirstExistingPath_UsesFirstMatchInPriorityOrder()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
         var searchPaths = resolver.GetSearchPaths();
         provider.Files[searchPaths[1]] = "ui: {}";
         provider.Files[searchPaths[0]] = "ui: {}";
@@ -22,11 +22,11 @@ public class ConfigPathResolverTests
     public void ExpandKnownVariables_ReplacesUserProfileAndAppDataTokens()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
 
-        var expandedPath = resolver.ExpandKnownVariables("%USERPROFILE%\\Pictures\\LoginShot;%APPDATA%\\LoginShot");
+        var expandedPath = resolver.ExpandKnownVariables("%USERPROFILE%\\Pictures\\LoginShot;%APPDATA%\\LoginShot;%LOCALAPPDATA%\\LoginShot\\logs");
 
-        Assert.That(expandedPath, Is.EqualTo("C:\\Users\\pablo\\Pictures\\LoginShot;C:\\Users\\pablo\\AppData\\Roaming\\LoginShot"));
+        Assert.That(expandedPath, Is.EqualTo("C:\\Users\\pablo\\Pictures\\LoginShot;C:\\Users\\pablo\\AppData\\Roaming\\LoginShot;C:\\Users\\pablo\\AppData\\Local\\LoginShot\\logs"));
     }
 }
 
@@ -36,7 +36,7 @@ public class LoginShotConfigLoaderTests
     public void Load_WhenNoConfigFileExists_ReturnsDefaults()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
         var loader = new LoginShotConfigLoader(resolver, provider);
 
         var config = loader.Load();
@@ -50,6 +50,9 @@ public class LoginShotConfigLoaderTests
             Assert.That(config.Capture.DebounceSeconds, Is.EqualTo(3));
             Assert.That(config.Capture.Backend, Is.EqualTo("opencv"));
             Assert.That(config.Capture.CameraIndex, Is.Null);
+            Assert.That(config.Logging.Directory, Is.EqualTo(Path.Combine("C:\\Users\\pablo\\AppData\\Local", "LoginShot", "logs")));
+            Assert.That(config.Logging.RetentionDays, Is.EqualTo(14));
+            Assert.That(config.Logging.CleanupIntervalHours, Is.EqualTo(24));
         });
     }
 
@@ -57,7 +60,7 @@ public class LoginShotConfigLoaderTests
     public void Load_WhenYamlOverridesSubset_MergesWithDefaults()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
         provider.Files[resolver.GetSearchPaths()[0]] =
             "output:\n" +
             "  directory: \"%APPDATA%\\\\Custom\\\\Shots\"\n" +
@@ -81,7 +84,7 @@ public class LoginShotConfigLoaderTests
     public void Load_WhenFormatInvalid_ThrowsValidationException()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
         provider.Files[resolver.GetSearchPaths()[0]] =
             "output:\n" +
             "  format: \"png\"\n";
@@ -96,7 +99,7 @@ public class LoginShotConfigLoaderTests
     public void Load_WhenJpegQualityInvalid_ThrowsValidationException()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
         provider.Files[resolver.GetSearchPaths()[0]] =
             "output:\n" +
             "  jpegQuality: 1.5\n";
@@ -111,7 +114,7 @@ public class LoginShotConfigLoaderTests
     public void Load_WhenYamlInvalid_ThrowsValidationException()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
         provider.Files[resolver.GetSearchPaths()[0]] = "output: [bad";
         var loader = new LoginShotConfigLoader(resolver, provider);
 
@@ -124,7 +127,7 @@ public class LoginShotConfigLoaderTests
     public void Load_WhenCaptureBackendInvalid_ThrowsValidationException()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
         provider.Files[resolver.GetSearchPaths()[0]] =
             "capture:\n" +
             "  backend: \"not-a-backend\"\n";
@@ -139,7 +142,7 @@ public class LoginShotConfigLoaderTests
     public void Load_WhenCaptureCameraIndexNegative_ThrowsValidationException()
     {
         var provider = new FakeConfigFileProvider();
-        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
         provider.Files[resolver.GetSearchPaths()[0]] =
             "capture:\n" +
             "  cameraIndex: -1\n";
@@ -148,6 +151,36 @@ public class LoginShotConfigLoaderTests
         var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
 
         Assert.That(exception!.Message, Does.Contain("capture.cameraIndex must be 0 or greater when provided."));
+    }
+
+    [Test]
+    public void Load_WhenLoggingRetentionDaysInvalid_ThrowsValidationException()
+    {
+        var provider = new FakeConfigFileProvider();
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+        provider.Files[resolver.GetSearchPaths()[0]] =
+            "logging:\n" +
+            "  retentionDays: 0\n";
+        var loader = new LoginShotConfigLoader(resolver, provider);
+
+        var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
+
+        Assert.That(exception!.Message, Does.Contain("logging.retentionDays must be 1 or greater."));
+    }
+
+    [Test]
+    public void Load_WhenLoggingCleanupIntervalInvalid_ThrowsValidationException()
+    {
+        var provider = new FakeConfigFileProvider();
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+        provider.Files[resolver.GetSearchPaths()[0]] =
+            "logging:\n" +
+            "  cleanupIntervalHours: 0\n";
+        var loader = new LoginShotConfigLoader(resolver, provider);
+
+        var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
+
+        Assert.That(exception!.Message, Does.Contain("logging.cleanupIntervalHours must be 1 or greater."));
     }
 
 }
