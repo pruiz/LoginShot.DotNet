@@ -39,6 +39,8 @@ internal static class Program
         using var loggerFactory = LoggerFactory.Create(builder =>
         {
             builder.ClearProviders();
+            // TODO: Evaluate replacing this custom provider with a battle-tested file sink (for example Serilog),
+            // while keeping setup fully programmatic and without requiring a separate logging config file.
             builder.AddProvider(new DailyFileLoggerProvider(fileLoggingOptions));
         });
 
