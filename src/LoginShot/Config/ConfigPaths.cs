@@ -23,6 +23,7 @@ internal static class ConfigPaths
         "\n" +
         "capture:\n" +
         "  debounceSeconds: 3\n" +
-        "  backend: \"opencv\"\n";
+        "  backend: \"opencv\"\n" +
+        "  cameraIndex: null\n";
 
 }

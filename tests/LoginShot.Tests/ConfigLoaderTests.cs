@@ -49,6 +49,7 @@ public class LoginShotConfigLoaderTests
             Assert.That(config.Triggers.OnLogon, Is.True);
             Assert.That(config.Capture.DebounceSeconds, Is.EqualTo(3));
             Assert.That(config.Capture.Backend, Is.EqualTo("opencv"));
+            Assert.That(config.Capture.CameraIndex, Is.Null);
         });
     }
 
@@ -132,6 +133,21 @@ public class LoginShotConfigLoaderTests
         var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
 
         Assert.That(exception!.Message, Does.Contain("capture.backend must be either 'opencv' or 'winrt-mediacapture'"));
+    }
+
+    [Test]
+    public void Load_WhenCaptureCameraIndexNegative_ThrowsValidationException()
+    {
+        var provider = new FakeConfigFileProvider();
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        provider.Files[resolver.GetSearchPaths()[0]] =
+            "capture:\n" +
+            "  cameraIndex: -1\n";
+        var loader = new LoginShotConfigLoader(resolver, provider);
+
+        var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
+
+        Assert.That(exception!.Message, Does.Contain("capture.cameraIndex must be 0 or greater when provided."));
     }
 
 }

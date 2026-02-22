@@ -13,7 +13,7 @@ public static class LoginShotConfigDefaults
             new TriggerConfig(true, true, true),
             new MetadataConfig(true),
             new UiConfig(true, false),
-            new CaptureConfig(3, "opencv"),
+            new CaptureConfig(3, "opencv", null),
             SourcePath: null);
     }
 }

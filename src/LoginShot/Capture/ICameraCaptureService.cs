@@ -2,7 +2,7 @@ using LoginShot.Triggers;
 
 namespace LoginShot.Capture;
 
-internal sealed record CaptureRequest(SessionEventType EventType, int? MaxWidth, double JpegQuality);
+internal sealed record CaptureRequest(SessionEventType EventType, int? MaxWidth, double JpegQuality, int? CameraIndex);
 
 internal interface ICameraCaptureService
 {
