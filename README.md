@@ -38,8 +38,8 @@ v1 trigger events:
 From repository root:
 
 ```bash
-dotnet build
-dotnet test
+dotnet build LoginShot.sln
+dotnet test LoginShot.sln
 ```
 
 If/when multiple projects are added, run build/test against the solution (`.sln`) or specific project paths.
