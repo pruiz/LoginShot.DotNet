@@ -54,21 +54,21 @@ LoginShot publishes unsigned Windows release artifacts via GitHub Actions.
    git push origin v1.2.3
    ```
 2. GitHub Actions builds self-contained single-file artifacts and uploads four assets to the GitHub Release:
-   - `LoginShot-windows-v1.2.3-win-x64-singlefile-selfcontained.zip`
-   - `LoginShot-windows-v1.2.3-win-x64-singlefile-selfcontained.zip.sha256`
-   - `LoginShot-windows-v1.2.3-win-arm64-singlefile-selfcontained.zip`
-   - `LoginShot-windows-v1.2.3-win-arm64-singlefile-selfcontained.zip.sha256`
+   - `LoginShot-windows-v1.2.3-win-x64-singlefile.zip`
+   - `LoginShot-windows-v1.2.3-win-x64-singlefile.zip.sha256`
+   - `LoginShot-windows-v1.2.3-win-arm64-singlefile.zip`
+   - `LoginShot-windows-v1.2.3-win-arm64-singlefile.zip.sha256`
 
 Verify checksum on Windows (PowerShell):
 
 ```powershell
-Get-FileHash .\LoginShot-windows-v1.2.3-win-x64-singlefile-selfcontained.zip -Algorithm SHA256
+Get-FileHash .\LoginShot-windows-v1.2.3-win-x64-singlefile.zip -Algorithm SHA256
 ```
 
 Verify checksum on macOS/Linux:
 
 ```bash
-shasum -a 256 -c LoginShot-windows-v1.2.3-win-x64-singlefile-selfcontained.zip.sha256
+shasum -a 256 -c LoginShot-windows-v1.2.3-win-x64-singlefile.zip.sha256
 ```
 
 Important:
