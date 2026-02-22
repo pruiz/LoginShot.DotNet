@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using LoginShot.Config;
+using LoginShot.Startup;
 using LoginShot.Storage;
 
 namespace LoginShot.App;
@@ -10,14 +11,18 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly ContextMenuStrip menu;
     private readonly NotifyIcon trayIcon;
     private readonly ToolStripMenuItem startAfterLoginMenuItem;
+    private readonly IStartupRegistrationService startupRegistrationService;
 
-    public LoginShotApplicationContext()
+    public LoginShotApplicationContext(bool launchFromStartupLogon)
     {
+        startupRegistrationService = CreateStartupRegistrationService();
+
         startAfterLoginMenuItem = new ToolStripMenuItem("Start after login")
         {
             CheckOnClick = true
         };
         startAfterLoginMenuItem.Click += OnStartAfterLoginClicked;
+        startAfterLoginMenuItem.Checked = startupRegistrationService.IsEnabled();
 
         menu = new ContextMenuStrip();
         menu.Items.Add(new ToolStripMenuItem("Capture now", null, OnCaptureNowClicked));
@@ -36,6 +41,11 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             ContextMenuStrip = menu,
             Visible = true
         };
+
+        if (launchFromStartupLogon)
+        {
+            HandleStartupLogonTrigger();
+        }
     }
 
     private static void OnCaptureNowClicked(object? sender, EventArgs eventArgs)
@@ -78,6 +88,27 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private void OnStartAfterLoginClicked(object? sender, EventArgs eventArgs)
     {
+        try
+        {
+            if (startAfterLoginMenuItem.Checked)
+            {
+                startupRegistrationService.Enable();
+            }
+            else
+            {
+                startupRegistrationService.Disable();
+            }
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(
+                $"Failed to update startup setting: {exception.Message}",
+                "LoginShot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+
+        startAfterLoginMenuItem.Checked = startupRegistrationService.IsEnabled();
     }
 
     private void OnQuitClicked(object? sender, EventArgs eventArgs)
@@ -86,5 +117,28 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         trayIcon.Dispose();
         menu.Dispose();
         ExitThread();
+    }
+
+    private static IStartupRegistrationService CreateStartupRegistrationService()
+    {
+        var executablePath = Application.ExecutablePath;
+        var startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+        var legacyShortcutPath = Path.Combine(startupDirectory, "LoginShot.lnk");
+        var schedulerClient = new SchtasksStartupTaskSchedulerClient();
+        var fileSystem = new SystemFileSystem();
+
+        return new TaskSchedulerStartupRegistrationService(
+            "LoginShot\\StartAfterLogin",
+            executablePath,
+            "--startup-trigger=logon",
+            legacyShortcutPath,
+            schedulerClient,
+            fileSystem);
+    }
+
+    private static void HandleStartupLogonTrigger()
+    {
+        Debug.WriteLine("Startup logon trigger received.");
+        // TODO: Route startup logon trigger to the capture pipeline.
     }
 }

@@ -39,7 +39,7 @@ Keep v1 local-only: no cloud APIs, no face recognition.
 - Metadata sidecar: JSON (`System.Text.Json`)
 - Logging: `Microsoft.Extensions.Logging`
 - Concurrency: async/await (structured concurrency)
-- Packaging: Windows app with tray icon and optional startup shortcut registration
+- Packaging: Windows app with tray icon and optional startup task registration (Task Scheduler)
 
 ## Repository Structure (target)
 
@@ -48,7 +48,7 @@ Keep v1 local-only: no cloud APIs, no face recognition.
     - `App/` (entrypoint, lifetime, tray icon/menu)
     - `Capture/` (camera access + one-shot capture)
     - `Triggers/` (logon/unlock/lock observers)
-    - `Startup/` (startup shortcut register/unregister)
+    - `Startup/` (startup task register/unregister)
     - `Config/` (load/parse/defaults/path expansion)
     - `Storage/` (filenaming, atomic writes, sidecar JSON)
     - `Util/` (debounce, clock/time helpers, logging helpers)
@@ -89,7 +89,7 @@ Agents may scaffold this structure as needed.
 - If enabled, include:
   - `Capture now`
   - `Open output folder`
-  - `Start after login` (startup shortcut toggle)
+  - `Start after login` (startup task toggle)
   - `Reload config`
   - `Generate sample config`
   - `Quit`
@@ -171,7 +171,7 @@ If lint tools are not configured, follow existing style in touched files and avo
   - Path expansion
   - Filename formatting
   - Debounce logic
-  - Startup shortcut registration/unregistration
+  - Startup task registration/unregistration
   - Metadata sidecar generation
 - Prefer deterministic tests with mocks/fakes for camera and clock.
 - Add integration/dev harness only when needed (e.g., debug trigger).
@@ -258,7 +258,7 @@ None present at time of writing. If `.cursorrules`, `.cursor/rules/`, or `.githu
 - Camera permissions are controlled by Windows Privacy settings and can be denied per machine/user policy.
 - Session lock/unlock signals may arrive in bursts; use debounce and event deduplication.
 - `lock` capture is best-effort in v1 due to timing and camera availability constraints.
-- Startup shortcuts can break if executable path changes; keep tray toggle idempotent and repair shortcuts when needed.
+- Startup task action can drift if executable path changes; keep tray toggle idempotent and repair task registration when needed.
 - Keep behavior transparent and auditable.
 
 ## Out of Scope (v1), possible future
