@@ -1,8 +1,10 @@
+using LoginShot.Triggers;
+
 namespace LoginShot.Capture;
 
 internal interface ICameraCaptureService
 {
-    Task<CaptureResult> CaptureOnceAsync(string eventName, CancellationToken cancellationToken);
+    Task<CaptureResult> CaptureOnceAsync(SessionEventType eventType, CancellationToken cancellationToken);
 }
 
-internal sealed record CaptureResult(bool Success, string? ImagePath, string? ErrorMessage);
+internal sealed record CaptureResult(bool Success, byte[]? ImageBytes, string? ErrorMessage, string? CameraDeviceName);
