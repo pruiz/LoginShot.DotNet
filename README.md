@@ -199,11 +199,12 @@ When tray icon is enabled, LoginShot exposes:
 | **Open output folder** | Open configured output directory in Explorer |
 | **Camera** | Select camera index (`Auto`, `Camera 0`, `Camera 1`, ...) and verify selection |
 | **Start after login** | Toggle startup task registration in Task Scheduler |
+| **Edit config** | Open the active `config.yml` in your default editor |
 | **Reload config** | Re-read YAML config without full restart |
 | **Generate sample config** | Write sample `config.yml` in `%APPDATA%\\LoginShot\\` (no overwrite) |
 | **Quit** | Exit LoginShot |
 
-If reload fails due to invalid config, LoginShot keeps the current in-memory config and shows an error.
+When config file changes are detected, LoginShot attempts automatic reload. Successful reloads and reload errors are shown via tray balloon notifications. If a changed config is invalid, LoginShot keeps the previous valid in-memory configuration.
 
 ## Trigger Reliability Notes
 
