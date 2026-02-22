@@ -9,13 +9,14 @@ internal sealed class TaskSchedulerStartupTaskSchedulerClient : IStartupTaskSche
     public bool TaskExists(string taskName)
     {
         using var taskService = new TaskService();
-        return taskService.GetTask(taskName) is not null;
+        using var task = taskService.GetTask(taskName);
+        return task is not null;
     }
 
     public bool IsTaskEnabled(string taskName)
     {
         using var taskService = new TaskService();
-        var task = taskService.GetTask(taskName);
+        using var task = taskService.GetTask(taskName);
         return task?.Enabled == true;
     }
 
