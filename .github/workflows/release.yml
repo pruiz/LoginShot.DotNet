@@ -1,0 +1,163 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag (strict semver, e.g. v1.2.3)
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-package:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, win-arm64]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Determine release tag
+        id: tag
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $tag = "${{ github.event.inputs.version }}"
+          } else {
+            $tag = "${{ github.ref_name }}"
+          }
+
+          if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
+            throw "Tag '$tag' is not strict semver (expected vMAJOR.MINOR.PATCH)."
+          }
+
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Restore
+        run: dotnet restore LoginShot.sln
+
+      - name: Publish single-file self-contained
+        shell: pwsh
+        run: |
+          $rid = "${{ matrix.rid }}"
+          $publishDir = "publish/$rid"
+
+          dotnet publish src/LoginShot/LoginShot.csproj `
+            -c Release `
+            -r $rid `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -o $publishDir
+
+      - name: Package artifact and checksum
+        id: package
+        shell: pwsh
+        run: |
+          $rid = "${{ matrix.rid }}"
+          $tag = "${{ steps.tag.outputs.tag }}"
+          $publishDir = Resolve-Path "publish/$rid"
+          $exePath = Join-Path $publishDir "LoginShot.exe"
+
+          if (-not (Test-Path $exePath)) {
+            throw "LoginShot.exe not found at $exePath"
+          }
+
+          $zipName = "LoginShot-windows-$tag-$rid-singlefile-selfcontained.zip"
+          $checksumName = "$zipName.sha256"
+
+          if (Test-Path $zipName) {
+            Remove-Item $zipName -Force
+          }
+
+          Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipName -CompressionLevel Optimal
+
+          $zipEntries = tar -tf $zipName
+          if ($zipEntries -notcontains "LoginShot.exe") {
+            throw "Packaged zip does not contain LoginShot.exe"
+          }
+
+          $hash = (Get-FileHash -Path $zipName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash *$zipName" | Out-File -FilePath $checksumName -Encoding ascii
+
+          "zip_name=$zipName" >> $env:GITHUB_OUTPUT
+          "checksum_name=$checksumName" >> $env:GITHUB_OUTPUT
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.rid }}
+          path: |
+            ${{ steps.package.outputs.zip_name }}
+            ${{ steps.package.outputs.checksum_name }}
+
+  publish-release:
+    runs-on: windows-latest
+    needs: build-package
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Determine release tag
+        id: tag
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $tag = "${{ github.event.inputs.version }}"
+          } else {
+            $tag = "${{ github.ref_name }}"
+          }
+
+          if ($tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {
+            throw "Tag '$tag' is not strict semver (expected vMAJOR.MINOR.PATCH)."
+          }
+
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Create or update GitHub release
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.tag.outputs.tag }}"
+          $assets = Get-ChildItem -Path release-assets -File
+
+          if ($assets.Count -eq 0) {
+            throw "No release assets were downloaded."
+          }
+
+          $assetPaths = @()
+          foreach ($asset in $assets) {
+            $assetPaths += $asset.FullName
+          }
+
+          if (gh release view $tag *> $null) {
+            gh release upload $tag @assetPaths --clobber
+          } else {
+            gh release create $tag @assetPaths `
+              --title $tag `
+              --notes "Self-contained single-file Windows builds for development/testing.\n\nThese artifacts are unsigned and rely on .NET single-file native extraction at runtime (OpenCV native binaries)." `
+              --target $env:GITHUB_SHA
+          }

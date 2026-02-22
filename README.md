@@ -44,6 +44,38 @@ dotnet test LoginShot.sln
 
 If/when multiple projects are added, run build/test against the solution (`.sln`) or specific project paths.
 
+## Release (unsigned)
+
+LoginShot publishes unsigned Windows release artifacts via GitHub Actions.
+
+1. Create a strict semver tag:
+   ```bash
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+2. GitHub Actions builds self-contained single-file artifacts and uploads four assets to the GitHub Release:
+   - `LoginShot-windows-v1.2.3-win-x64-singlefile-selfcontained.zip`
+   - `LoginShot-windows-v1.2.3-win-x64-singlefile-selfcontained.zip.sha256`
+   - `LoginShot-windows-v1.2.3-win-arm64-singlefile-selfcontained.zip`
+   - `LoginShot-windows-v1.2.3-win-arm64-singlefile-selfcontained.zip.sha256`
+
+Verify checksum on Windows (PowerShell):
+
+```powershell
+Get-FileHash .\LoginShot-windows-v1.2.3-win-x64-singlefile-selfcontained.zip -Algorithm SHA256
+```
+
+Verify checksum on macOS/Linux:
+
+```bash
+shasum -a 256 -c LoginShot-windows-v1.2.3-win-x64-singlefile-selfcontained.zip.sha256
+```
+
+Important:
+- Only strict semver tags are accepted (`vMAJOR.MINOR.PATCH`).
+- Artifacts are unsigned and may trigger Windows SmartScreen warnings.
+- Single-file artifacts extract native dependencies (OpenCV runtime) at startup via .NET bundle extraction.
+
 ## Installation (developer mode)
 
 1. Clone:
