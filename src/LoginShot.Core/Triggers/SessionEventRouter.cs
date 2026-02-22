@@ -23,19 +23,21 @@ public sealed class SessionEventRouter
 
     public void UpdateOptions(TriggerHandlingOptions updatedOptions)
     {
-        options = updatedOptions;
+        Interlocked.Exchange(ref options, updatedOptions);
     }
 
     public async Task HandleEventAsync(SessionEventType eventType, CancellationToken cancellationToken = default)
     {
-        if (!IsEnabled(eventType))
+        var snapshot = Volatile.Read(ref options);
+
+        if (!IsEnabled(eventType, snapshot))
         {
             return;
         }
 
         if (RequiresDebounce(eventType))
         {
-            var shouldProcess = eventDebouncer.ShouldProcess(eventType, timeProvider.UtcNow, options.DebounceWindow);
+            var shouldProcess = eventDebouncer.ShouldProcess(eventType, timeProvider.UtcNow, snapshot.DebounceWindow);
             if (!shouldProcess)
             {
                 return;
@@ -58,7 +60,7 @@ public sealed class SessionEventRouter
         }
     }
 
-    private bool IsEnabled(SessionEventType eventType)
+    private static bool IsEnabled(SessionEventType eventType, TriggerHandlingOptions options)
     {
         return eventType switch
         {
