@@ -13,7 +13,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly ToolStripMenuItem startAfterLoginMenuItem;
     private readonly IStartupRegistrationService startupRegistrationService;
 
-    public LoginShotApplicationContext()
+    public LoginShotApplicationContext(bool launchFromStartupLogon)
     {
         startupRegistrationService = CreateStartupRegistrationService();
 
@@ -41,6 +41,11 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             ContextMenuStrip = menu,
             Visible = true
         };
+
+        if (launchFromStartupLogon)
+        {
+            HandleStartupLogonTrigger();
+        }
     }
 
     private static void OnCaptureNowClicked(object? sender, EventArgs eventArgs)
@@ -116,16 +121,24 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private static IStartupRegistrationService CreateStartupRegistrationService()
     {
-        var startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
         var executablePath = Application.ExecutablePath;
-        var shortcutWriter = new WindowsShellStartupShortcutWriter();
+        var startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+        var legacyShortcutPath = Path.Combine(startupDirectory, "LoginShot.lnk");
+        var schedulerClient = new SchtasksStartupTaskSchedulerClient();
         var fileSystem = new SystemFileSystem();
 
-        return new StartupShortcutRegistrationService(
-            startupDirectory,
-            "LoginShot.lnk",
+        return new TaskSchedulerStartupRegistrationService(
+            "LoginShot\\StartAfterLogin",
             executablePath,
-            shortcutWriter,
+            "--startup-trigger=logon",
+            legacyShortcutPath,
+            schedulerClient,
             fileSystem);
+    }
+
+    private static void HandleStartupLogonTrigger()
+    {
+        Debug.WriteLine("Startup logon trigger received.");
+        // TODO: Route startup logon trigger to the capture pipeline.
     }
 }

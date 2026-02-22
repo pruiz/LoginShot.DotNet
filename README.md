@@ -61,15 +61,13 @@ If/when multiple projects are added, run build/test against the solution (`.sln`
 
 ## Startup Behavior
 
-LoginShot can self-register for user startup from the tray menu:
+LoginShot can self-register for user startup from the tray menu using Windows Task Scheduler:
 
-- `Start after login` enabled: app creates/updates a shortcut in the current user's Startup folder.
-- `Start after login` disabled: app removes the startup shortcut.
+- `Start after login` enabled: app creates/updates task `LoginShot\StartAfterLogin` with an `ONLOGON` trigger.
+- `Start after login` disabled: app removes that scheduled task.
+- Task action launches LoginShot with `--startup-trigger=logon`.
 
-Startup folder path:
-- `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
-
-This keeps startup behavior visible and user-controlled without requiring admin rights.
+Startup registration remains user-scoped and does not require admin rights.
 
 ## Configuration (YAML)
 
@@ -150,7 +148,7 @@ When tray icon is enabled, LoginShot exposes:
 |-----------|-------------|
 | **Capture now** | Take a snapshot immediately (`manual` event) |
 | **Open output folder** | Open configured output directory in Explorer |
-| **Start after login** | Toggle startup shortcut registration |
+| **Start after login** | Toggle startup task registration in Task Scheduler |
 | **Reload config** | Re-read YAML config without full restart |
 | **Generate sample config** | Write sample `config.yml` in `%APPDATA%\\LoginShot\\` (no overwrite) |
 | **Quit** | Exit LoginShot |
@@ -158,6 +156,8 @@ When tray icon is enabled, LoginShot exposes:
 ## Trigger Reliability Notes
 
 - `logon` and `unlock` captures are expected behavior when events are delivered and camera is available.
+- `logon` startup trigger is wired from scheduler launch (`--startup-trigger=logon`).
+- TODO: route startup `logon` trigger to the capture pipeline (follow-up task).
 - `lock` capture is **best-effort** in v1. Lock transitions can be timing-sensitive and camera access may fail depending on device/policy state.
 - Failures should be logged with context and must not crash the app.
 
@@ -167,8 +167,8 @@ When tray icon is enabled, LoginShot exposes:
   - Windows Settings -> Privacy & security -> Camera.
   - Ensure camera access is enabled for desktop apps.
 - **Startup toggle does not work**
-  - Verify shortcut exists in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`.
-  - Confirm target path still points to the current executable location.
+  - Verify task `LoginShot\StartAfterLogin` exists in Task Scheduler.
+  - Confirm task action points to the current executable and includes `--startup-trigger=logon`.
 - **Lock capture missing**
   - In v1 this is best-effort; inspect logs for event timing or camera acquisition failures.
 - **Config not loading**

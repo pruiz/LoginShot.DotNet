@@ -7,11 +7,6 @@ public sealed class SystemFileSystem : IFileSystem
         return File.Exists(path);
     }
 
-    public void EnsureDirectory(string path)
-    {
-        Directory.CreateDirectory(path);
-    }
-
     public void DeleteFile(string path)
     {
         File.Delete(path);

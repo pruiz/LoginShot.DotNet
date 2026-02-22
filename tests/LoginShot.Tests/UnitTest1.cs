@@ -1,3 +1,4 @@
+using LoginShot.AppLaunch;
 using LoginShot.Storage;
 using LoginShot.Startup;
 using LoginShot.Triggers;
@@ -27,106 +28,140 @@ public class CaptureFileNameBuilderTests
     }
 }
 
-public class StartupShortcutRegistrationServiceTests
+public class TaskSchedulerStartupRegistrationServiceTests
 {
     [Test]
-    public void Enable_CreatesShortcutAndMarksServiceEnabled()
+    public void Enable_RegistersTaskAndMarksServiceEnabled()
     {
         var fileSystem = new FakeFileSystem();
-        var shortcutWriter = new FakeStartupShortcutWriter(fileSystem);
-        var service = CreateService(fileSystem, shortcutWriter);
+        var schedulerClient = new FakeTaskSchedulerClient();
+        var service = CreateService(fileSystem, schedulerClient);
 
         service.Enable();
 
         Assert.Multiple(() =>
         {
-            Assert.That(fileSystem.EnsuredDirectories, Has.Member("C:\\Users\\pablo\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"));
             Assert.That(service.IsEnabled(), Is.True);
-            Assert.That(shortcutWriter.WriteCount, Is.EqualTo(1));
+            Assert.That(schedulerClient.RegisterCalls, Is.EqualTo(1));
+            Assert.That(schedulerClient.LastArguments, Is.EqualTo("--startup-trigger=logon"));
         });
     }
 
     [Test]
-    public void Disable_WhenEnabled_RemovesShortcutAndMarksServiceDisabled()
+    public void Disable_WhenEnabled_RemovesTaskAndMarksServiceDisabled()
     {
         var fileSystem = new FakeFileSystem();
-        var shortcutWriter = new FakeStartupShortcutWriter(fileSystem);
-        var service = CreateService(fileSystem, shortcutWriter);
+        var schedulerClient = new FakeTaskSchedulerClient();
+        var service = CreateService(fileSystem, schedulerClient);
         service.Enable();
-
-        service.Disable();
-
-        Assert.That(service.IsEnabled(), Is.False);
-    }
-
-    [Test]
-    public void Disable_WhenAlreadyDisabled_IsNoOp()
-    {
-        var fileSystem = new FakeFileSystem();
-        var shortcutWriter = new FakeStartupShortcutWriter(fileSystem);
-        var service = CreateService(fileSystem, shortcutWriter);
 
         service.Disable();
 
         Assert.Multiple(() =>
         {
             Assert.That(service.IsEnabled(), Is.False);
-            Assert.That(fileSystem.DeleteCalls, Is.EqualTo(0));
+            Assert.That(schedulerClient.DeleteCalls, Is.EqualTo(1));
         });
     }
 
     [Test]
-    public void Enable_IsIdempotentAndKeepsSingleShortcutPath()
+    public void Disable_WhenAlreadyDisabled_IsNoOp()
     {
         var fileSystem = new FakeFileSystem();
-        var shortcutWriter = new FakeStartupShortcutWriter(fileSystem);
-        var service = CreateService(fileSystem, shortcutWriter);
+        var schedulerClient = new FakeTaskSchedulerClient();
+        var service = CreateService(fileSystem, schedulerClient);
 
-        service.Enable();
-        service.Enable();
+        service.Disable();
 
         Assert.Multiple(() =>
         {
-            Assert.That(service.IsEnabled(), Is.True);
-            Assert.That(shortcutWriter.WriteCount, Is.EqualTo(2));
-            Assert.That(fileSystem.Files.Count, Is.EqualTo(1));
+            Assert.That(service.IsEnabled(), Is.False);
+            Assert.That(schedulerClient.DeleteCalls, Is.EqualTo(0));
         });
     }
 
-    private static StartupShortcutRegistrationService CreateService(
-        FakeFileSystem fileSystem,
-        FakeStartupShortcutWriter shortcutWriter)
+    [Test]
+    public void Enable_CleansUpLegacyShortcut()
     {
-        return new StartupShortcutRegistrationService(
-            "C:\\Users\\pablo\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
-            "LoginShot.lnk",
+        var fileSystem = new FakeFileSystem();
+        var schedulerClient = new FakeTaskSchedulerClient();
+        var service = CreateService(fileSystem, schedulerClient);
+
+        fileSystem.Files.Add("C:\\Users\\pablo\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\LoginShot.lnk");
+
+        service.Enable();
+
+        Assert.That(fileSystem.Files, Is.Empty);
+    }
+
+    [Test]
+    public void Disable_CleansUpLegacyShortcut()
+    {
+        var fileSystem = new FakeFileSystem();
+        var schedulerClient = new FakeTaskSchedulerClient();
+        var service = CreateService(fileSystem, schedulerClient);
+
+        fileSystem.Files.Add("C:\\Users\\pablo\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\LoginShot.lnk");
+        service.Disable();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fileSystem.Files, Is.Empty);
+            Assert.That(fileSystem.DeleteCalls, Is.EqualTo(1));
+        });
+    }
+
+    private static TaskSchedulerStartupRegistrationService CreateService(
+        FakeFileSystem fileSystem,
+        FakeTaskSchedulerClient schedulerClient)
+    {
+        return new TaskSchedulerStartupRegistrationService(
+            "LoginShot\\StartAfterLogin",
             "C:\\Tools\\LoginShot\\LoginShot.exe",
-            shortcutWriter,
+            "--startup-trigger=logon",
+            "C:\\Users\\pablo\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\LoginShot.lnk",
+            schedulerClient,
             fileSystem);
     }
 
-    private sealed class FakeStartupShortcutWriter : IStartupShortcutWriter
+    private sealed class FakeTaskSchedulerClient : IStartupTaskSchedulerClient
     {
-        private readonly FakeFileSystem fileSystem;
+        private bool exists;
+        private bool enabled;
 
-        public FakeStartupShortcutWriter(FakeFileSystem fileSystem)
+        public int RegisterCalls { get; private set; }
+        public int DeleteCalls { get; private set; }
+        public string? LastArguments { get; private set; }
+
+        public bool TaskExists(string taskName)
         {
-            this.fileSystem = fileSystem;
+            return exists;
         }
 
-        public int WriteCount { get; private set; }
-
-        public void WriteShortcut(string shortcutPath, string targetPath, string workingDirectory, string description)
+        public bool IsTaskEnabled(string taskName)
         {
-            WriteCount++;
-            fileSystem.Files.Add(shortcutPath);
+            return enabled;
+        }
+
+        public void RegisterLogonTask(string taskName, string executablePath, string arguments, string description)
+        {
+            RegisterCalls++;
+            exists = true;
+            enabled = true;
+            LastArguments = arguments;
+        }
+
+        public void DeleteTask(string taskName)
+        {
+            DeleteCalls++;
+            exists = false;
+            enabled = false;
         }
     }
 
     private sealed class FakeFileSystem : IFileSystem
     {
         public HashSet<string> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
-        public List<string> EnsuredDirectories { get; } = new();
         public int DeleteCalls { get; private set; }
 
         public bool FileExists(string path)
@@ -134,15 +169,33 @@ public class StartupShortcutRegistrationServiceTests
             return Files.Contains(path);
         }
 
-        public void EnsureDirectory(string path)
-        {
-            EnsuredDirectories.Add(path);
-        }
-
         public void DeleteFile(string path)
         {
             DeleteCalls++;
             Files.Remove(path);
         }
+    }
+}
+
+public class AppLaunchTriggerParserTests
+{
+    [Test]
+    public void IsStartupLogonLaunch_WhenArgumentPresent_ReturnsTrue()
+    {
+        var args = new[] { "--startup-trigger=logon" };
+
+        var result = AppLaunchTriggerParser.IsStartupLogonLaunch(args);
+
+        Assert.That(result, Is.True);
+    }
+
+    [Test]
+    public void IsStartupLogonLaunch_WhenArgumentMissing_ReturnsFalse()
+    {
+        var args = new[] { "--some-other-arg" };
+
+        var result = AppLaunchTriggerParser.IsStartupLogonLaunch(args);
+
+        Assert.That(result, Is.False);
     }
 }
