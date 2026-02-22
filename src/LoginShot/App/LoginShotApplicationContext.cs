@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Drawing;
 using LoginShot.Config;
 using LoginShot.Startup;
+using LoginShot.Triggers;
 
 namespace LoginShot.App;
 
@@ -12,12 +13,18 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly ToolStripMenuItem startAfterLoginMenuItem;
     private readonly IStartupRegistrationService startupRegistrationService;
     private readonly IConfigLoader configLoader;
+    private readonly ISessionEventSource sessionEventSource;
+    private readonly SessionEventRouter sessionEventRouter;
     private LoginShotConfig currentConfig;
 
-    public LoginShotApplicationContext()
+    public LoginShotApplicationContext(ITriggerDispatcher triggerDispatcher)
     {
         configLoader = CreateConfigLoader();
         currentConfig = LoadConfigOnStartup(configLoader);
+
+        sessionEventRouter = CreateSessionEventRouter(triggerDispatcher, currentConfig);
+        sessionEventSource = new WindowsSessionEventSource();
+        sessionEventSource.SessionEventReceived += OnSessionEventReceived;
 
         startupRegistrationService = CreateStartupRegistrationService();
 
@@ -56,6 +63,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         try
         {
             currentConfig = configLoader.Load();
+            sessionEventRouter.UpdateOptions(CreateTriggerHandlingOptions(currentConfig));
         }
         catch (Exception exception)
         {
@@ -124,10 +132,17 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private void OnQuitClicked(object? sender, EventArgs eventArgs)
     {
+        sessionEventSource.SessionEventReceived -= OnSessionEventReceived;
+        sessionEventSource.Dispose();
         trayIcon.Visible = false;
         trayIcon.Dispose();
         menu.Dispose();
         ExitThread();
+    }
+
+    private void OnSessionEventReceived(object? sender, SessionEventType eventType)
+    {
+        _ = sessionEventRouter.HandleEventAsync(eventType);
     }
 
     private static IStartupRegistrationService CreateStartupRegistrationService()
@@ -159,6 +174,22 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private static LoginShotConfig LoadConfigOnStartup(IConfigLoader loader)
     {
         return loader.Load();
+    }
+
+    private static SessionEventRouter CreateSessionEventRouter(ITriggerDispatcher triggerDispatcher, LoginShotConfig config)
+    {
+        var debouncer = new PerEventTypeDebouncer();
+        var timeProvider = new SystemEventTimeProvider();
+        var options = CreateTriggerHandlingOptions(config);
+        return new SessionEventRouter(triggerDispatcher, debouncer, timeProvider, options);
+    }
+
+    private static TriggerHandlingOptions CreateTriggerHandlingOptions(LoginShotConfig config)
+    {
+        return new TriggerHandlingOptions(
+            config.Triggers.OnUnlock,
+            config.Triggers.OnLock,
+            TimeSpan.FromSeconds(config.Capture.DebounceSeconds));
     }
 
 }

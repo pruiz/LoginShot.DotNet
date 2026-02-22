@@ -161,6 +161,7 @@ If reload fails due to invalid config, LoginShot keeps the current in-memory con
 
 - `logon` and `unlock` captures are expected behavior when events are delivered and camera is available.
 - `logon` startup trigger is wired from scheduler launch (`--startup-trigger=logon`).
+- session lock/unlock signals are routed through per-event-type debounce (`unlock` and `lock` are debounced independently).
 - TODO: route startup `logon` trigger to the capture pipeline (follow-up task).
 - `lock` capture is **best-effort** in v1. Lock transitions can be timing-sensitive and camera access may fail depending on device/policy state.
 - Failures should be logged with context and must not crash the app.
