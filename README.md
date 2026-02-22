@@ -2,7 +2,7 @@
 
 LoginShot is a Windows background tray app that captures a webcam snapshot when your user session reaches key states and stores the image plus metadata in a configurable local folder.
 
-This aims to be the windows counterpart to https://github.com/pruiz/LoginShot. (Which was infact a PoC of an original idea by @aramosf)
+This aims to be the Windows counterpart to https://github.com/pruiz/LoginShot. (Which was in fact a PoC of an original idea by @aramosf)
 
 v1 trigger events:
 - `logon` (app starts after user login)
@@ -99,7 +99,7 @@ LoginShot can self-register for user startup from the tray menu using Windows Ta
 - `Start after login` disabled: app removes that scheduled task.
 - Task action launches LoginShot with `--startup-trigger=logon`.
 
-Startup registration remains user-scoped and does not require admin rights.
+Startup registration is user-scoped and generally does not require admin rights. Some machine policies can still block Task Scheduler registration.
 
 ## Configuration (YAML)
 
@@ -115,6 +115,8 @@ If no config file is found, LoginShot uses safe defaults:
 - **Metadata:** JSON sidecar enabled
 - **Tray icon:** enabled
 - **Debounce:** 3 seconds
+
+Path values in YAML may use either `\` or `/` separators. LoginShot normalizes configured Windows paths during load.
 
 If a config file is found but invalid, LoginShot fails startup with clear diagnostics.
 
@@ -140,7 +142,7 @@ ui:
 
 capture:
   debounceSeconds: 3
-  backend: "opencv"   # v1: "opencv" (planned: "winrt-mediacapture")
+  backend: "opencv"   # "winrt-mediacapture" is accepted but currently falls back to OpenCV
   cameraIndex: null    # null = auto/default camera; otherwise 0, 1, 2...
 
 logging:
