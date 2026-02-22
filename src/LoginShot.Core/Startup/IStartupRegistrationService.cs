@@ -1,6 +1,6 @@
 namespace LoginShot.Startup;
 
-internal interface IStartupRegistrationService
+public interface IStartupRegistrationService
 {
     bool IsEnabled();
     void Enable();

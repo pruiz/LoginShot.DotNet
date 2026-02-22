@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using LoginShot.Config;
+using LoginShot.Startup;
 using LoginShot.Storage;
 
 namespace LoginShot.App;
@@ -10,14 +11,18 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly ContextMenuStrip menu;
     private readonly NotifyIcon trayIcon;
     private readonly ToolStripMenuItem startAfterLoginMenuItem;
+    private readonly IStartupRegistrationService startupRegistrationService;
 
     public LoginShotApplicationContext()
     {
+        startupRegistrationService = CreateStartupRegistrationService();
+
         startAfterLoginMenuItem = new ToolStripMenuItem("Start after login")
         {
             CheckOnClick = true
         };
         startAfterLoginMenuItem.Click += OnStartAfterLoginClicked;
+        startAfterLoginMenuItem.Checked = startupRegistrationService.IsEnabled();
 
         menu = new ContextMenuStrip();
         menu.Items.Add(new ToolStripMenuItem("Capture now", null, OnCaptureNowClicked));
@@ -78,6 +83,27 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private void OnStartAfterLoginClicked(object? sender, EventArgs eventArgs)
     {
+        try
+        {
+            if (startAfterLoginMenuItem.Checked)
+            {
+                startupRegistrationService.Enable();
+            }
+            else
+            {
+                startupRegistrationService.Disable();
+            }
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(
+                $"Failed to update startup setting: {exception.Message}",
+                "LoginShot",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+
+        startAfterLoginMenuItem.Checked = startupRegistrationService.IsEnabled();
     }
 
     private void OnQuitClicked(object? sender, EventArgs eventArgs)
@@ -86,5 +112,20 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         trayIcon.Dispose();
         menu.Dispose();
         ExitThread();
+    }
+
+    private static IStartupRegistrationService CreateStartupRegistrationService()
+    {
+        var startupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+        var executablePath = Application.ExecutablePath;
+        var shortcutWriter = new WindowsShellStartupShortcutWriter();
+        var fileSystem = new SystemFileSystem();
+
+        return new StartupShortcutRegistrationService(
+            startupDirectory,
+            "LoginShot.lnk",
+            executablePath,
+            shortcutWriter,
+            fileSystem);
     }
 }
