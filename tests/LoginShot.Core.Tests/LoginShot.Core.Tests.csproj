@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
     <IsPackable>false</IsPackable>
-    <IsTestProject Condition="'$(OS)' == 'Windows_NT'">true</IsTestProject>
-    <IsTestProject Condition="'$(OS)' != 'Windows_NT'">false</IsTestProject>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\LoginShot\LoginShot.csproj" />
+    <ProjectReference Include="..\..\src\LoginShot.Core\LoginShot.Core.csproj" />
   </ItemGroup>
 
 </Project>

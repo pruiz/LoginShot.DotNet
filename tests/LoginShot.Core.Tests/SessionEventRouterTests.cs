@@ -1,7 +1,7 @@
 using LoginShot.Triggers;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace LoginShot.Tests;
+namespace LoginShot.Core.Tests;
 
 public class SessionEventRouterTests
 {

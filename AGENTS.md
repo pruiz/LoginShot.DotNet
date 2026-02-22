@@ -58,7 +58,7 @@ Keep v1 local-only: no cloud APIs, no face recognition.
     - `Triggers/` (event models, debounce/router logic)
     - `Startup/` (startup task registration contracts/services)
 - `tests/`
-  - `LoginShot.Tests/`
+  - `LoginShot.Core.Tests/`
 
 Agents may scaffold this structure as needed.
 
