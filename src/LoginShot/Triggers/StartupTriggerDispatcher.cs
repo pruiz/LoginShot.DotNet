@@ -7,13 +7,11 @@ namespace LoginShot.Triggers;
 
 internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
 {
-    private readonly ICameraCaptureService cameraCaptureService;
     private readonly ICaptureStorageService captureStorageService;
     private readonly IConfigLoader configLoader;
 
     public StartupTriggerDispatcher()
     {
-        cameraCaptureService = new PlaceholderCameraCaptureService();
         captureStorageService = new CaptureStorageService(new AtomicFileWriter());
         configLoader = CreateConfigLoader();
     }
@@ -31,7 +29,13 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
             return;
         }
 
-        var captureResult = await cameraCaptureService.CaptureOnceAsync(eventType, cancellationToken);
+        var cameraCaptureService = CreateCameraCaptureService(config.Capture.Backend);
+        var captureRequest = new CaptureRequest(
+            EventType: eventType,
+            MaxWidth: config.Output.MaxWidth,
+            JpegQuality: config.Output.JpegQuality);
+
+        var captureResult = await cameraCaptureService.CaptureOnceAsync(captureRequest, cancellationToken);
         if (!captureResult.Success)
         {
             Debug.WriteLine($"Capture failed for {eventType}: {captureResult.ErrorMessage}");
@@ -107,5 +111,23 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
             Id: "LoginShot",
             Version: version,
             Build: "dev");
+    }
+
+    private static ICameraCaptureService CreateCameraCaptureService(string backend)
+    {
+        if (string.Equals(backend, "opencv", StringComparison.OrdinalIgnoreCase))
+        {
+            return new OpenCvCameraCaptureService();
+        }
+
+        if (string.Equals(backend, "winrt-mediacapture", StringComparison.OrdinalIgnoreCase))
+        {
+            // TODO: Implement WinRT MediaCapture backend and select it via capture.backend.
+            Debug.WriteLine("TODO: implement WinRT MediaCapture backend. Falling back to OpenCV.");
+            return new OpenCvCameraCaptureService();
+        }
+
+        Debug.WriteLine($"Unknown capture backend '{backend}'. Falling back to OpenCV.");
+        return new OpenCvCameraCaptureService();
     }
 }

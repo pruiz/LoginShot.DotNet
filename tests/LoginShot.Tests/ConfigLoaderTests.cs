@@ -48,6 +48,7 @@ public class LoginShotConfigLoaderTests
             Assert.That(config.Output.Format, Is.EqualTo("jpg"));
             Assert.That(config.Triggers.OnLogon, Is.True);
             Assert.That(config.Capture.DebounceSeconds, Is.EqualTo(3));
+            Assert.That(config.Capture.Backend, Is.EqualTo("opencv"));
         });
     }
 
@@ -116,6 +117,21 @@ public class LoginShotConfigLoaderTests
         var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
 
         Assert.That(exception!.Message, Does.Contain("Failed to parse config"));
+    }
+
+    [Test]
+    public void Load_WhenCaptureBackendInvalid_ThrowsValidationException()
+    {
+        var provider = new FakeConfigFileProvider();
+        var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", provider);
+        provider.Files[resolver.GetSearchPaths()[0]] =
+            "capture:\n" +
+            "  backend: \"not-a-backend\"\n";
+        var loader = new LoginShotConfigLoader(resolver, provider);
+
+        var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
+
+        Assert.That(exception!.Message, Does.Contain("capture.backend must be either 'opencv' or 'winrt-mediacapture'"));
     }
 
 }

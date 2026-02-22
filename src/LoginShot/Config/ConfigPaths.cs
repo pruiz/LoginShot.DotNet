@@ -22,6 +22,7 @@ internal static class ConfigPaths
         "  startAfterLogin: false\n" +
         "\n" +
         "capture:\n" +
-        "  debounceSeconds: 3\n";
+        "  debounceSeconds: 3\n" +
+        "  backend: \"opencv\"\n";
 
 }

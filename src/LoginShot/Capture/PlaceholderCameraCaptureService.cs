@@ -4,7 +4,7 @@ namespace LoginShot.Capture;
 
 internal sealed class PlaceholderCameraCaptureService : ICameraCaptureService
 {
-    public Task<CaptureResult> CaptureOnceAsync(SessionEventType eventType, CancellationToken cancellationToken)
+    public Task<CaptureResult> CaptureOnceAsync(CaptureRequest request, CancellationToken cancellationToken)
     {
         var result = new CaptureResult(
             Success: false,

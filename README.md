@@ -108,6 +108,7 @@ ui:
 
 capture:
   debounceSeconds: 3
+  backend: "opencv"   # v1: "opencv" (planned: "winrt-mediacapture")
 ```
 
 ## Output Files
@@ -124,6 +125,8 @@ If enabled, sidecar metadata JSON is also written with the same basename:
 - `2026-02-22T12-15-30-lock.json`
 
 If camera capture fails, LoginShot still writes a failure sidecar with the same basename schema (no image file), and logs the failure.
+
+Current capture backend is OpenCV. A WinRT `MediaCapture` backend is planned as a configurable alternative.
 
 ### Sidecar JSON schema (draft)
 ```json
