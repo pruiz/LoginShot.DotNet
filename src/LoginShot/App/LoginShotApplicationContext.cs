@@ -77,7 +77,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
         trayIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = LoadTrayIcon(),
             Text = "LoginShot",
             ContextMenuStrip = menu,
             Visible = true
@@ -421,6 +421,25 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
             config.Triggers.OnUnlock,
             config.Triggers.OnLock,
             TimeSpan.FromSeconds(config.Capture.DebounceSeconds));
+    }
+
+    private Icon LoadTrayIcon()
+    {
+        try
+        {
+            var icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            if (icon is not null)
+            {
+                logger.LogInformation("Loaded tray icon from executable resources");
+                return icon;
+            }
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(exception, "Failed to load tray icon from executable resources; using fallback icon");
+        }
+
+        return SystemIcons.Application;
     }
 
 }
