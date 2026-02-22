@@ -22,18 +22,13 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     private readonly IStartupRegistrationService startupRegistrationService;
     private readonly IConfigLoader configLoader;
     private readonly IConfigWriter configWriter;
-    private readonly ICameraDeviceEnumerator cameraDeviceEnumerator;
     private readonly ISessionEventSource sessionEventSource;
     private readonly SessionEventRouter sessionEventRouter;
     private readonly ILogger<LoginShotApplicationContext> logger;
     private readonly SynchronizationContext uiContext;
-    private readonly object cameraRefreshLock = new();
-    private readonly object configReloadLock = new();
-    private IReadOnlyList<int> cachedCameraIndexes = Array.Empty<int>();
-    private DateTimeOffset? lastCameraRefreshUtc;
-    private bool isRefreshingCameraIndexes;
-    private FileSystemWatcher? configFileWatcher;
-    private System.Threading.Timer? configReloadTimer;
+    private readonly CameraIndexCacheService cameraIndexCacheService;
+    private readonly CameraSelectionService cameraSelectionService;
+    private readonly ConfigReloadCoordinator configReloadCoordinator;
     private LoginShotConfig currentConfig;
 
     public LoginShotApplicationContext(
@@ -48,9 +43,22 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         this.triggerDispatcher = triggerDispatcher;
         this.configLoader = configLoader;
         this.configWriter = configWriter;
-        this.cameraDeviceEnumerator = cameraDeviceEnumerator;
         this.logger = logger;
         currentConfig = LoadConfigOnStartup(this.configLoader);
+
+        cameraIndexCacheService = new CameraIndexCacheService(
+            cameraDeviceEnumerator,
+            logger,
+            CameraIndexProbeCount,
+            CameraRefreshInterval);
+        cameraSelectionService = new CameraSelectionService(configWriter, logger);
+        configReloadCoordinator = new ConfigReloadCoordinator(
+            uiContext,
+            this.configLoader.Load,
+            OnConfigReloadSucceeded,
+            OnConfigReloadFailed,
+            OnConfigWatcherError,
+            logger);
 
         sessionEventRouter = CreateSessionEventRouter(triggerDispatcher, currentConfig, sessionEventRouterLogger);
         sessionEventSource = new WindowsSessionEventSource();
@@ -89,7 +97,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         };
 
         RefreshCameraMenuItems();
-        EnsureConfigWatcherBound();
+        configReloadCoordinator.Bind(currentConfig.SourcePath);
     }
 
     private async void OnCaptureNowClicked(object? sender, EventArgs eventArgs)
@@ -125,7 +133,6 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         try
         {
             var configPath = EnsureConfigFileExists();
-            EnsureConfigWatcherBound();
 
             Process.Start(new ProcessStartInfo
             {
@@ -251,7 +258,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
     {
         cameraMenuItem.DropDownOpening -= OnCameraMenuOpening;
         sessionEventSource.SessionEventReceived -= OnSessionEventReceived;
-        DisposeConfigWatcher();
+        configReloadCoordinator.Dispose();
         sessionEventSource.Dispose();
         trayIcon.Visible = false;
         trayIcon.Dispose();
@@ -284,19 +291,10 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
     private void RefreshCameraMenuItems()
     {
-        var shouldRefresh = ShouldRefreshCameraIndexes();
-        if (shouldRefresh)
-        {
-            StartCameraRefresh();
-        }
-
-        IReadOnlyList<int> detectedIndexes;
-        var refreshing = false;
-        lock (cameraRefreshLock)
-        {
-            detectedIndexes = cachedCameraIndexes;
-            refreshing = isRefreshingCameraIndexes;
-        }
+        var snapshot = cameraIndexCacheService.GetSnapshotAndRefreshIfNeeded(
+            () => uiContext.Post(_ => RefreshCameraMenuItems(), null));
+        var detectedIndexes = snapshot.Indexes;
+        var refreshing = snapshot.IsRefreshing;
 
         cameraMenuItem.DropDownItems.Clear();
 
@@ -336,87 +334,20 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         cameraMenuItem.DropDownItems.Add(new ToolStripMenuItem("Verify selected camera", null, OnVerifySelectedCameraClicked));
     }
 
-    private bool ShouldRefreshCameraIndexes()
-    {
-        lock (cameraRefreshLock)
-        {
-            if (isRefreshingCameraIndexes)
-            {
-                return false;
-            }
-
-            if (lastCameraRefreshUtc is null)
-            {
-                return true;
-            }
-
-            return DateTimeOffset.UtcNow - lastCameraRefreshUtc >= CameraRefreshInterval;
-        }
-    }
-
-    private void StartCameraRefresh()
-    {
-        lock (cameraRefreshLock)
-        {
-            if (isRefreshingCameraIndexes)
-            {
-                return;
-            }
-
-            isRefreshingCameraIndexes = true;
-        }
-
-        _ = Task.Run(() =>
-        {
-            IReadOnlyList<int> indexes;
-            try
-            {
-                indexes = cameraDeviceEnumerator.EnumerateIndexes(CameraIndexProbeCount);
-            }
-            catch (Exception exception)
-            {
-                logger.LogWarning(exception, "Failed to enumerate camera indexes");
-                indexes = Array.Empty<int>();
-            }
-
-            lock (cameraRefreshLock)
-            {
-                cachedCameraIndexes = indexes;
-                lastCameraRefreshUtc = DateTimeOffset.UtcNow;
-                isRefreshingCameraIndexes = false;
-            }
-
-            uiContext.Post(_ => RefreshCameraMenuItems(), null);
-        });
-    }
-
     private void ApplyCameraSelection(int? cameraIndex)
     {
-        var previousConfig = currentConfig;
-        currentConfig = currentConfig with
+        if (!cameraSelectionService.TryApplySelection(currentConfig, cameraIndex, out var updatedConfig, out var errorMessage))
         {
-            Capture = currentConfig.Capture with
-            {
-                CameraIndex = cameraIndex
-            }
-        };
-
-        try
-        {
-            var savedPath = configWriter.Save(currentConfig, currentConfig.SourcePath);
-            currentConfig = currentConfig with { SourcePath = savedPath };
-            logger.LogInformation("Updated camera selection to {CameraIndex} and saved config to {ConfigPath}", cameraIndex, savedPath);
-        }
-        catch (Exception exception)
-        {
-            currentConfig = previousConfig;
-            logger.LogWarning(exception, "Failed to save camera selection {CameraIndex}", cameraIndex);
             MessageBox.Show(
-                $"Failed to save camera selection: {exception.Message}",
+                $"Failed to save camera selection: {errorMessage}",
                 "LoginShot",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
+            return;
         }
+
+        currentConfig = updatedConfig;
+        configReloadCoordinator.Bind(currentConfig.SourcePath);
 
         RefreshCameraMenuItems();
     }
@@ -435,97 +366,49 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
         var savedPath = configWriter.Save(currentConfig, null);
         currentConfig = currentConfig with { SourcePath = savedPath };
+        configReloadCoordinator.Bind(savedPath);
         logger.LogInformation("Created configuration file at {ConfigPath}", savedPath);
         return savedPath;
     }
 
-    private void EnsureConfigWatcherBound()
-    {
-        if (string.IsNullOrWhiteSpace(currentConfig.SourcePath))
-        {
-            DisposeConfigWatcher();
-            return;
-        }
-
-        var targetPath = currentConfig.SourcePath;
-        if (configFileWatcher is not null &&
-            string.Equals(configFileWatcher.Path, Path.GetDirectoryName(targetPath), StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(configFileWatcher.Filter, Path.GetFileName(targetPath), StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        DisposeConfigWatcher();
-
-        var directory = Path.GetDirectoryName(targetPath)
-            ?? throw new InvalidOperationException("Config path has no directory.");
-        var fileName = Path.GetFileName(targetPath);
-
-        var watcher = new FileSystemWatcher(directory, fileName)
-        {
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.CreationTime | NotifyFilters.Size,
-            EnableRaisingEvents = true,
-            IncludeSubdirectories = false
-        };
-
-        watcher.Changed += OnConfigFileChanged;
-        watcher.Created += OnConfigFileChanged;
-        watcher.Renamed += OnConfigFileChanged;
-        watcher.Error += OnConfigWatcherError;
-
-        configFileWatcher = watcher;
-        logger.LogInformation("Watching config file changes at {ConfigPath}", targetPath);
-    }
-
-    private void OnConfigFileChanged(object sender, FileSystemEventArgs eventArgs)
-    {
-        ScheduleAutoReload();
-    }
-
-    private void OnConfigWatcherError(object sender, ErrorEventArgs eventArgs)
-    {
-        logger.LogWarning(eventArgs.GetException(), "Config file watcher encountered an error");
-        ShowBalloon("Config watcher", "Config watcher encountered an error; automatic reload may be delayed.", ToolTipIcon.Warning);
-        ScheduleAutoReload();
-    }
-
-    private void ScheduleAutoReload()
-    {
-        lock (configReloadLock)
-        {
-            configReloadTimer?.Dispose();
-            configReloadTimer = new System.Threading.Timer(_ =>
-            {
-                uiContext.Post(_ => ReloadConfiguration(notifyOnSuccess: true, autoReload: true), null);
-            }, null, TimeSpan.FromMilliseconds(1200), Timeout.InfiniteTimeSpan);
-        }
-    }
-
     private void ReloadConfiguration(bool notifyOnSuccess, bool autoReload)
     {
-        try
-        {
-            var reloaded = configLoader.Load();
-            currentConfig = reloaded;
-            sessionEventRouter.UpdateOptions(CreateTriggerHandlingOptions(currentConfig));
-            EnsureConfigWatcherBound();
+        configReloadCoordinator.RequestReload(notifyOnSuccess, autoReload);
+    }
 
-            logger.LogInformation("Configuration reloaded from {ConfigPath}", currentConfig.SourcePath ?? "defaults");
-            if (notifyOnSuccess)
-            {
-                ShowBalloon("Config", autoReload
-                    ? "Configuration changes were detected and reloaded."
-                    : "Configuration reloaded successfully.", ToolTipIcon.Info);
-            }
-        }
-        catch (Exception exception)
+    private void OnConfigReloadSucceeded(LoginShotConfig reloadedConfig, bool notifyOnSuccess, bool autoReload)
+    {
+        currentConfig = reloadedConfig;
+        sessionEventRouter.UpdateOptions(CreateTriggerHandlingOptions(currentConfig));
+
+        logger.LogInformation("Configuration reloaded from {ConfigPath}", currentConfig.SourcePath ?? "defaults");
+        if (notifyOnSuccess)
         {
-            logger.LogWarning(exception, "Failed to reload configuration");
             ShowBalloon(
-                "Config error",
-                $"Config reload failed: {exception.Message}. Keeping previous valid configuration.",
-                ToolTipIcon.Warning);
+                "Config",
+                autoReload
+                    ? "Configuration changes were detected and reloaded."
+                    : "Configuration reloaded successfully.",
+                ToolTipIcon.Info);
         }
+    }
+
+    private void OnConfigReloadFailed(Exception exception, bool _notifyOnSuccess, bool _autoReload)
+    {
+        logger.LogWarning(exception, "Failed to reload configuration");
+        ShowBalloon(
+            "Config error",
+            $"Config reload failed: {exception.Message}. Keeping previous valid configuration.",
+            ToolTipIcon.Warning);
+    }
+
+    private void OnConfigWatcherError(Exception exception)
+    {
+        logger.LogWarning(exception, "Config file watcher encountered an error");
+        ShowBalloon(
+            "Config watcher",
+            "Config watcher encountered an error; automatic reload may be delayed.",
+            ToolTipIcon.Warning);
     }
 
     private void ShowBalloon(string title, string text, ToolTipIcon icon)
@@ -535,26 +418,6 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
         trayIcon.BalloonTipText = clipped;
         trayIcon.BalloonTipIcon = icon;
         trayIcon.ShowBalloonTip(5000);
-    }
-
-    private void DisposeConfigWatcher()
-    {
-        if (configFileWatcher is not null)
-        {
-            configFileWatcher.EnableRaisingEvents = false;
-            configFileWatcher.Changed -= OnConfigFileChanged;
-            configFileWatcher.Created -= OnConfigFileChanged;
-            configFileWatcher.Renamed -= OnConfigFileChanged;
-            configFileWatcher.Error -= OnConfigWatcherError;
-            configFileWatcher.Dispose();
-            configFileWatcher = null;
-        }
-
-        lock (configReloadLock)
-        {
-            configReloadTimer?.Dispose();
-            configReloadTimer = null;
-        }
     }
 
     private static SessionEventRouter CreateSessionEventRouter(ITriggerDispatcher triggerDispatcher, LoginShotConfig config, ILogger<SessionEventRouter> logger)
