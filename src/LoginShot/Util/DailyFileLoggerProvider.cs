@@ -61,8 +61,8 @@ internal sealed class DailyFileLoggerProvider : ILoggerProvider
 
 		writer?.Dispose();
 
-		var filePath = Path.Combine(options.DirectoryPath, $"loginshot-{timestamp:yyyy-MM-dd}.log");
-		var stream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.Read);
+		var filePath = LogFilePathProvider.GetDailyLogFilePath(options.DirectoryPath, timestamp);
+		var stream = new FileStream(filePath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
 		writer = new StreamWriter(stream)
 		{
 			AutoFlush = true

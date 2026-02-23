@@ -5,6 +5,7 @@ using LoginShot.Capture;
 using LoginShot.Config;
 using LoginShot.Startup;
 using LoginShot.Triggers;
+using LoginShot.Util;
 using Microsoft.Extensions.Logging;
 
 namespace LoginShot.App;
@@ -79,6 +80,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 		menu = new ContextMenuStrip();
 		menu.Items.Add(new ToolStripMenuItem("Capture now", null, OnCaptureNowClicked));
 		menu.Items.Add(new ToolStripMenuItem("Open output folder", null, OnOpenOutputFolderClicked));
+		menu.Items.Add(new ToolStripMenuItem("Open log", null, OnOpenLogClicked));
 		menu.Items.Add(cameraMenuItem);
 		menu.Items.Add(startAfterLoginMenuItem);
 		menu.Items.Add(new ToolStripSeparator());
@@ -210,6 +212,31 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 		};
 
 		Process.Start(processStartInfo);
+	}
+
+	private void OnOpenLogClicked(object? sender, EventArgs eventArgs)
+	{
+		try
+		{
+			Directory.CreateDirectory(currentConfig.Logging.Directory);
+			var logPath = LogFilePathProvider.GetDailyLogFilePath(currentConfig.Logging.Directory, DateTimeOffset.Now);
+
+			using (new FileStream(logPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete))
+			{
+			}
+
+			logger.LogInformation("Opening log file {LogPath}", logPath);
+			Process.Start(new ProcessStartInfo
+			{
+				FileName = logPath,
+				UseShellExecute = true
+			});
+		}
+		catch (Exception exception)
+		{
+			logger.LogWarning(exception, "Failed to open current log file");
+			ShowBalloon("Log error", $"Failed to open log file: {exception.Message}", ToolTipIcon.Warning);
+		}
 	}
 
 	private static void OnGenerateSampleConfigClicked(object? sender, EventArgs eventArgs)
