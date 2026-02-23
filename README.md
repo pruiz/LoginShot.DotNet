@@ -204,6 +204,7 @@ When tray icon is enabled, LoginShot exposes:
 |-----------|-------------|
 | **Capture now** | Take a snapshot immediately (`manual` event) |
 | **Open output folder** | Open configured output directory in Explorer |
+| **Open log** | Open the current daily log file in your associated app |
 | **Camera** | Select camera index (`Auto`, `Camera 0`, `Camera 1`, ...) and verify selection |
 | **Start after login** | Toggle startup task registration in Task Scheduler |
 | **Edit config** | Open the active `config.yml` in your default editor |
