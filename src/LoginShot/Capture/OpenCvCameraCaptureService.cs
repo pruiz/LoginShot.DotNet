@@ -13,6 +13,13 @@ internal sealed class OpenCvCameraCaptureService : ICameraCaptureService
 		VideoCaptureAPIs.ANY
 	];
 
+	// These conservative defaults intentionally classify near-black captures as failures
+	// so users do not get false-positive "success" images with only watermark text.
+	private const double BlackFrameMaxLumaThreshold = 25.0;
+	private const double BlackFrameMeanLumaThreshold = 18.0;
+	private const double BlackFrameDarkPixelRatioThreshold = 0.98;
+	private const double BrightPixelLumaThreshold = 20.0;
+
 	private readonly ILogger logger;
 
 	public OpenCvCameraCaptureService(ILogger logger)
@@ -181,7 +188,7 @@ internal sealed class OpenCvCameraCaptureService : ICameraCaptureService
 			var frameStats = ComputeFrameStats(frame);
 			if (frameStats.IsBlackFrame)
 			{
-				return AttemptCaptureResult.Failure("black_frame", "Captured frame appears black or near-black.", stopwatch.ElapsedMilliseconds, frameStats);
+				return AttemptCaptureResult.Failure("black_frame", BuildBlackFrameMessage(frameStats), stopwatch.ElapsedMilliseconds, frameStats);
 			}
 
 			using var processed = ResizeIfNeeded(frame, request.MaxWidth);
@@ -245,12 +252,15 @@ internal sealed class OpenCvCameraCaptureService : ICameraCaptureService
 		var meanLuma = Cv2.Mean(grayscale).Val0;
 
 		using var brightMask = new Mat();
-		Cv2.Threshold(grayscale, brightMask, 20, 255, ThresholdTypes.Binary);
+		Cv2.Threshold(grayscale, brightMask, BrightPixelLumaThreshold, 255, ThresholdTypes.Binary);
 		var totalPixels = grayscale.Rows * grayscale.Cols;
 		var brightPixels = Cv2.CountNonZero(brightMask);
 		var darkPixelRatio = totalPixels <= 0 ? 1.0 : (totalPixels - brightPixels) / (double)totalPixels;
 
-		var blackFrame = maxLuma <= 25.0 || meanLuma < 18.0 || darkPixelRatio >= 0.98;
+		var blackFrame =
+			maxLuma <= BlackFrameMaxLumaThreshold ||
+			meanLuma < BlackFrameMeanLumaThreshold ||
+			darkPixelRatio >= BlackFrameDarkPixelRatioThreshold;
 
 		return new CaptureFrameStats(
 			Width: frame.Width,
@@ -261,6 +271,14 @@ internal sealed class OpenCvCameraCaptureService : ICameraCaptureService
 			MaxLuma: maxLuma,
 			DarkPixelRatio: darkPixelRatio,
 			IsBlackFrame: blackFrame);
+	}
+
+	private static string BuildBlackFrameMessage(CaptureFrameStats stats)
+	{
+		return $"Captured frame appears black or near-black. " +
+			$"mean={stats.MeanLuma:0.0} (threshold<{BlackFrameMeanLumaThreshold:0.0}), " +
+			$"max={stats.MaxLuma:0.0} (threshold<={BlackFrameMaxLumaThreshold:0.0}), " +
+			$"darkRatio={stats.DarkPixelRatio:0.000} (threshold>={BlackFrameDarkPixelRatioThreshold:0.000}).";
 	}
 
 	private static string GetBackendName(VideoCaptureAPIs backend)
