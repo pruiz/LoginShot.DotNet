@@ -1,27 +1,63 @@
-﻿using OpenCvSharp;
+﻿using DirectShowLib;
+using OpenCvSharp;
 
 namespace LoginShot.Capture;
 
 internal interface ICameraDeviceEnumerator
 {
-	IReadOnlyList<int> EnumerateIndexes(int maxIndexExclusive = 10);
+	IReadOnlyList<CameraDeviceDescriptor> EnumerateDevices(int maxIndexExclusive = 10);
 }
+
+internal readonly record struct CameraDeviceDescriptor(int Index, string? Name);
 
 internal sealed class OpenCvCameraDeviceEnumerator : ICameraDeviceEnumerator
 {
-	public IReadOnlyList<int> EnumerateIndexes(int maxIndexExclusive = 10)
+	public IReadOnlyList<CameraDeviceDescriptor> EnumerateDevices(int maxIndexExclusive = 10)
 	{
-		var result = new List<int>();
+		var openCvIndexes = new List<int>();
 
 		for (var index = 0; index < maxIndexExclusive; index++)
 		{
 			using var capture = new VideoCapture(index);
 			if (capture.IsOpened())
 			{
-				result.Add(index);
+				openCvIndexes.Add(index);
 			}
 		}
 
+		var friendlyNames = GetFriendlyCameraNames();
+		if (friendlyNames.Count != openCvIndexes.Count)
+		{
+			friendlyNames = Array.Empty<string>();
+		}
+
+		var result = new List<CameraDeviceDescriptor>(openCvIndexes.Count);
+		for (var i = 0; i < openCvIndexes.Count; i++)
+		{
+			var index = openCvIndexes[i];
+			var name = i < friendlyNames.Count ? friendlyNames[i] : null;
+			result.Add(new CameraDeviceDescriptor(index, name));
+		}
+
 		return result;
+	}
+
+	private static IReadOnlyList<string> GetFriendlyCameraNames()
+	{
+		try
+		{
+			var devices = DsDevice.GetDevicesOfCat(FilterCategory.VideoInputDevice);
+			var names = new List<string>(devices.Length);
+			foreach (var device in devices)
+			{
+				names.Add(device.Name ?? string.Empty);
+			}
+
+			return names;
+		}
+		catch
+		{
+			return Array.Empty<string>();
+		}
 	}
 }
