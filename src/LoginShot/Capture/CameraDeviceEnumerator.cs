@@ -26,6 +26,11 @@ internal sealed class OpenCvCameraDeviceEnumerator : ICameraDeviceEnumerator
 		}
 
 		var friendlyNames = GetFriendlyCameraNames();
+		if (friendlyNames.Count != openCvIndexes.Count)
+		{
+			friendlyNames = Array.Empty<string>();
+		}
+
 		var result = new List<CameraDeviceDescriptor>(openCvIndexes.Count);
 		for (var i = 0; i < openCvIndexes.Count; i++)
 		{
