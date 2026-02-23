@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LoginShot.App;
 
-internal readonly record struct CameraIndexSnapshot(IReadOnlyList<int> Indexes, bool IsRefreshing);
+internal readonly record struct CameraIndexSnapshot(IReadOnlyList<CameraDeviceDescriptor> Devices, bool IsRefreshing);
 
 internal sealed class CameraIndexCacheService
 {
@@ -12,7 +12,7 @@ internal sealed class CameraIndexCacheService
 	private readonly int cameraIndexProbeCount;
 	private readonly TimeSpan refreshInterval;
 	private readonly object syncLock = new();
-	private IReadOnlyList<int> cachedIndexes = Array.Empty<int>();
+	private IReadOnlyList<CameraDeviceDescriptor> cachedDevices = Array.Empty<CameraDeviceDescriptor>();
 	private DateTimeOffset? lastRefreshUtc;
 	private bool isRefreshing;
 
@@ -47,26 +47,26 @@ internal sealed class CameraIndexCacheService
 
 		lock (syncLock)
 		{
-			return new CameraIndexSnapshot(cachedIndexes, isRefreshing);
+			return new CameraIndexSnapshot(cachedDevices, isRefreshing);
 		}
 	}
 
 	private void RefreshInBackground(Action onRefreshed)
 	{
-		IReadOnlyList<int> indexes;
+		IReadOnlyList<CameraDeviceDescriptor> devices;
 		try
 		{
-			indexes = cameraDeviceEnumerator.EnumerateIndexes(cameraIndexProbeCount);
+			devices = cameraDeviceEnumerator.EnumerateDevices(cameraIndexProbeCount);
 		}
 		catch (Exception exception)
 		{
-			logger.LogWarning(exception, "Failed to enumerate camera indexes");
-			indexes = Array.Empty<int>();
+			logger.LogWarning(exception, "Failed to enumerate camera devices");
+			devices = Array.Empty<CameraDeviceDescriptor>();
 		}
 
 		lock (syncLock)
 		{
-			cachedIndexes = indexes;
+			cachedDevices = devices;
 			lastRefreshUtc = DateTimeOffset.UtcNow;
 			isRefreshing = false;
 		}

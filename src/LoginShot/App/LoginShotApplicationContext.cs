@@ -293,7 +293,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 	{
 		var snapshot = cameraIndexCacheService.GetSnapshotAndRefreshIfNeeded(
 			() => uiContext.Post(_ => RefreshCameraMenuItems(), null));
-		var detectedIndexes = snapshot.Indexes;
+		var detectedDevices = snapshot.Devices;
 		var refreshing = snapshot.IsRefreshing;
 
 		cameraMenuItem.DropDownItems.Clear();
@@ -314,24 +314,34 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 			});
 		}
 
-		if (detectedIndexes.Count > 0)
+		if (detectedDevices.Count > 0)
 		{
 			cameraMenuItem.DropDownItems.Add(new ToolStripSeparator());
 		}
 
-		foreach (var index in detectedIndexes)
+		foreach (var device in detectedDevices)
 		{
-			var item = new ToolStripMenuItem($"Camera {index}")
+			var item = new ToolStripMenuItem(BuildCameraMenuLabel(device))
 			{
-				Checked = currentConfig.Capture.CameraIndex == index,
-				Tag = index
+				Checked = currentConfig.Capture.CameraIndex == device.Index,
+				Tag = device.Index
 			};
-			item.Click += (_, _) => ApplyCameraSelection(index);
+			item.Click += (_, _) => ApplyCameraSelection(device.Index);
 			cameraMenuItem.DropDownItems.Add(item);
 		}
 
 		cameraMenuItem.DropDownItems.Add(new ToolStripSeparator());
 		cameraMenuItem.DropDownItems.Add(new ToolStripMenuItem("Verify selected camera", null, OnVerifySelectedCameraClicked));
+	}
+
+	private static string BuildCameraMenuLabel(CameraDeviceDescriptor device)
+	{
+		if (string.IsNullOrWhiteSpace(device.Name))
+		{
+			return $"Camera {device.Index}";
+		}
+
+		return $"Camera {device.Index} - {device.Name}";
 	}
 
 	private void ApplyCameraSelection(int? cameraIndex)

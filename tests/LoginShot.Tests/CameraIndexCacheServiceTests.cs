@@ -16,7 +16,12 @@ public class CameraIndexCacheServiceTests
 		var enumerator = new BlockingEnumerator(
 			onEnumerateStarted: () => refreshStarted.Set(),
 			beforeReturn: () => allowRefreshToFinish.Wait(TimeSpan.FromSeconds(2)),
-			result: new[] { 0, 2, 5 });
+			result: new[]
+			{
+				new CameraDeviceDescriptor(0, "Integrated Camera"),
+				new CameraDeviceDescriptor(2, "USB Camera"),
+				new CameraDeviceDescriptor(5, null)
+			});
 		var service = new CameraIndexCacheService(enumerator, NullLogger.Instance, cameraIndexProbeCount: 10, refreshInterval: TimeSpan.FromMinutes(10));
 
 		var initialSnapshot = service.GetSnapshotAndRefreshIfNeeded(() => callbackInvoked.Set());
@@ -30,7 +35,12 @@ public class CameraIndexCacheServiceTests
 		Assert.Multiple(() =>
 		{
 			Assert.That(refreshedSnapshot.IsRefreshing, Is.False);
-			Assert.That(refreshedSnapshot.Indexes, Is.EqualTo(new[] { 0, 2, 5 }));
+			Assert.That(refreshedSnapshot.Devices, Is.EqualTo(new[]
+			{
+				new CameraDeviceDescriptor(0, "Integrated Camera"),
+				new CameraDeviceDescriptor(2, "USB Camera"),
+				new CameraDeviceDescriptor(5, null)
+			}));
 			Assert.That(enumerator.CallCount, Is.EqualTo(1));
 		});
 	}
@@ -42,7 +52,7 @@ public class CameraIndexCacheServiceTests
 		var enumerator = new BlockingEnumerator(
 			onEnumerateStarted: static () => { },
 			beforeReturn: static () => { },
-			result: new[] { 1 });
+			result: new[] { new CameraDeviceDescriptor(1, "External Camera") });
 		var service = new CameraIndexCacheService(enumerator, NullLogger.Instance, cameraIndexProbeCount: 10, refreshInterval: TimeSpan.FromHours(1));
 
 		service.GetSnapshotAndRefreshIfNeeded(() => callbackInvoked.Set());
@@ -53,7 +63,7 @@ public class CameraIndexCacheServiceTests
 		Assert.Multiple(() =>
 		{
 			Assert.That(snapshot.IsRefreshing, Is.False);
-			Assert.That(snapshot.Indexes, Is.EqualTo(new[] { 1 }));
+			Assert.That(snapshot.Devices, Is.EqualTo(new[] { new CameraDeviceDescriptor(1, "External Camera") }));
 			Assert.That(enumerator.CallCount, Is.EqualTo(1));
 		});
 	}
@@ -72,7 +82,7 @@ public class CameraIndexCacheServiceTests
 		Assert.Multiple(() =>
 		{
 			Assert.That(snapshot.IsRefreshing, Is.False);
-			Assert.That(snapshot.Indexes, Is.Empty);
+			Assert.That(snapshot.Devices, Is.Empty);
 			Assert.That(enumerator.CallCount, Is.EqualTo(1));
 		});
 	}
@@ -81,9 +91,9 @@ public class CameraIndexCacheServiceTests
 	{
 		private readonly Action onEnumerateStarted;
 		private readonly Action beforeReturn;
-		private readonly IReadOnlyList<int> result;
+		private readonly IReadOnlyList<CameraDeviceDescriptor> result;
 
-		public BlockingEnumerator(Action onEnumerateStarted, Action beforeReturn, IReadOnlyList<int> result)
+		public BlockingEnumerator(Action onEnumerateStarted, Action beforeReturn, IReadOnlyList<CameraDeviceDescriptor> result)
 		{
 			this.onEnumerateStarted = onEnumerateStarted;
 			this.beforeReturn = beforeReturn;
@@ -92,7 +102,7 @@ public class CameraIndexCacheServiceTests
 
 		public int CallCount { get; private set; }
 
-		public IReadOnlyList<int> EnumerateIndexes(int maxIndexExclusive = 10)
+		public IReadOnlyList<CameraDeviceDescriptor> EnumerateDevices(int maxIndexExclusive = 10)
 		{
 			CallCount++;
 			onEnumerateStarted();
@@ -105,7 +115,7 @@ public class CameraIndexCacheServiceTests
 	{
 		public int CallCount { get; private set; }
 
-		public IReadOnlyList<int> EnumerateIndexes(int maxIndexExclusive = 10)
+		public IReadOnlyList<CameraDeviceDescriptor> EnumerateDevices(int maxIndexExclusive = 10)
 		{
 			CallCount++;
 			throw new InvalidOperationException("camera unavailable");
