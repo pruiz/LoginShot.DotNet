@@ -167,7 +167,8 @@ jobs:
             $assetPaths += $asset.FullName
           }
 
-          if (gh release view $tag *> $null) {
+          gh release view $tag --json tagName *> $null
+          if ($LASTEXITCODE -eq 0) {
             gh release upload $tag @assetPaths --clobber
           } else {
             gh release create $tag @assetPaths `
