@@ -1,6 +1,6 @@
-namespace LoginShot.Config;
+﻿namespace LoginShot.Config;
 
 internal interface IConfigWriter
 {
-    string Save(LoginShotConfig config, string? preferredPath);
+	string Save(LoginShotConfig config, string? preferredPath);
 }

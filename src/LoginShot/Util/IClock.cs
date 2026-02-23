@@ -1,6 +1,6 @@
-namespace LoginShot.Util;
+﻿namespace LoginShot.Util;
 
 internal interface IClock
 {
-    DateTimeOffset UtcNow { get; }
+	DateTimeOffset UtcNow { get; }
 }

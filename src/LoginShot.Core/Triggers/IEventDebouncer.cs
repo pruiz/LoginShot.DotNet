@@ -1,6 +1,6 @@
-namespace LoginShot.Triggers;
+﻿namespace LoginShot.Triggers;
 
 public interface IEventDebouncer
 {
-    bool ShouldProcess(SessionEventType eventType, DateTimeOffset timestamp, TimeSpan debounceWindow);
+	bool ShouldProcess(SessionEventType eventType, DateTimeOffset timestamp, TimeSpan debounceWindow);
 }

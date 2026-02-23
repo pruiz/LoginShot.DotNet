@@ -1,6 +1,6 @@
-namespace LoginShot.Triggers;
+﻿namespace LoginShot.Triggers;
 
 public sealed record TriggerHandlingOptions(
-    bool EnableUnlock,
-    bool EnableLock,
-    TimeSpan DebounceWindow);
+	bool EnableUnlock,
+	bool EnableLock,
+	TimeSpan DebounceWindow);

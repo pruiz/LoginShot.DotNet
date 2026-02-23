@@ -1,246 +1,246 @@
-using YamlDotNet.Serialization;
+﻿using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace LoginShot.Config;
 
 public sealed class LoginShotConfigLoader : IConfigLoader
 {
-    private readonly ConfigPathResolver pathResolver;
-    private readonly IConfigFileProvider fileProvider;
-    private readonly IDeserializer deserializer;
+	private readonly ConfigPathResolver pathResolver;
+	private readonly IConfigFileProvider fileProvider;
+	private readonly IDeserializer deserializer;
 
-    public LoginShotConfigLoader(ConfigPathResolver pathResolver, IConfigFileProvider fileProvider)
-    {
-        this.pathResolver = pathResolver;
-        this.fileProvider = fileProvider;
-        deserializer = new DeserializerBuilder()
-            .WithNamingConvention(CamelCaseNamingConvention.Instance)
-            .IgnoreUnmatchedProperties()
-            .Build();
-    }
+	public LoginShotConfigLoader(ConfigPathResolver pathResolver, IConfigFileProvider fileProvider)
+	{
+		this.pathResolver = pathResolver;
+		this.fileProvider = fileProvider;
+		deserializer = new DeserializerBuilder()
+			.WithNamingConvention(CamelCaseNamingConvention.Instance)
+			.IgnoreUnmatchedProperties()
+			.Build();
+	}
 
-    public LoginShotConfig Load()
-    {
-        var resolvedPath = pathResolver.ResolveFirstExistingPath();
-        var config = LoginShotConfigDefaults.Create(pathResolver.UserProfilePath, pathResolver.LocalAppDataPath);
+	public LoginShotConfig Load()
+	{
+		var resolvedPath = pathResolver.ResolveFirstExistingPath();
+		var config = LoginShotConfigDefaults.Create(pathResolver.UserProfilePath, pathResolver.LocalAppDataPath);
 
-        if (resolvedPath is null)
-        {
-            return config;
-        }
+		if (resolvedPath is null)
+		{
+			return config;
+		}
 
-        var yamlText = fileProvider.ReadAllText(resolvedPath);
+		var yamlText = fileProvider.ReadAllText(resolvedPath);
 
-        ConfigDocument? document;
-        try
-        {
-            document = deserializer.Deserialize<ConfigDocument>(yamlText);
-        }
-        catch (Exception exception)
-        {
-            throw new ConfigValidationException($"Failed to parse config '{resolvedPath}': {exception.Message}", exception);
-        }
+		ConfigDocument? document;
+		try
+		{
+			document = deserializer.Deserialize<ConfigDocument>(yamlText);
+		}
+		catch (Exception exception)
+		{
+			throw new ConfigValidationException($"Failed to parse config '{resolvedPath}': {exception.Message}", exception);
+		}
 
-        config = Merge(config, document ?? new ConfigDocument());
-        config = config with
-        {
-            Output = config.Output with
-            {
-                Directory = pathResolver.NormalizeWindowsPathSeparators(
-                    pathResolver.ExpandKnownVariables(config.Output.Directory))
-            },
-            Logging = config.Logging with
-            {
-                Directory = pathResolver.NormalizeWindowsPathSeparators(
-                    pathResolver.ExpandKnownVariables(config.Logging.Directory))
-            },
-            SourcePath = resolvedPath
-        };
+		config = Merge(config, document ?? new ConfigDocument());
+		config = config with
+		{
+			Output = config.Output with
+			{
+				Directory = pathResolver.NormalizeWindowsPathSeparators(
+					pathResolver.ExpandKnownVariables(config.Output.Directory))
+			},
+			Logging = config.Logging with
+			{
+				Directory = pathResolver.NormalizeWindowsPathSeparators(
+					pathResolver.ExpandKnownVariables(config.Logging.Directory))
+			},
+			SourcePath = resolvedPath
+		};
 
-        Validate(config);
-        return config;
-    }
+		Validate(config);
+		return config;
+	}
 
-    private static LoginShotConfig Merge(LoginShotConfig defaults, ConfigDocument document)
-    {
-        var output = defaults.Output with
-        {
-            Directory = document.Output?.Directory ?? defaults.Output.Directory,
-            Format = document.Output?.Format ?? defaults.Output.Format,
-            MaxWidth = document.Output?.MaxWidth ?? defaults.Output.MaxWidth,
-            JpegQuality = document.Output?.JpegQuality ?? defaults.Output.JpegQuality
-        };
+	private static LoginShotConfig Merge(LoginShotConfig defaults, ConfigDocument document)
+	{
+		var output = defaults.Output with
+		{
+			Directory = document.Output?.Directory ?? defaults.Output.Directory,
+			Format = document.Output?.Format ?? defaults.Output.Format,
+			MaxWidth = document.Output?.MaxWidth ?? defaults.Output.MaxWidth,
+			JpegQuality = document.Output?.JpegQuality ?? defaults.Output.JpegQuality
+		};
 
-        var triggers = defaults.Triggers with
-        {
-            OnLogon = document.Triggers?.OnLogon ?? defaults.Triggers.OnLogon,
-            OnUnlock = document.Triggers?.OnUnlock ?? defaults.Triggers.OnUnlock,
-            OnLock = document.Triggers?.OnLock ?? defaults.Triggers.OnLock
-        };
+		var triggers = defaults.Triggers with
+		{
+			OnLogon = document.Triggers?.OnLogon ?? defaults.Triggers.OnLogon,
+			OnUnlock = document.Triggers?.OnUnlock ?? defaults.Triggers.OnUnlock,
+			OnLock = document.Triggers?.OnLock ?? defaults.Triggers.OnLock
+		};
 
-        var metadata = defaults.Metadata with
-        {
-            WriteSidecar = document.Metadata?.WriteSidecar ?? defaults.Metadata.WriteSidecar
-        };
+		var metadata = defaults.Metadata with
+		{
+			WriteSidecar = document.Metadata?.WriteSidecar ?? defaults.Metadata.WriteSidecar
+		};
 
-        var ui = defaults.Ui with
-        {
-            TrayIcon = document.Ui?.TrayIcon ?? defaults.Ui.TrayIcon,
-            StartAfterLogin = document.Ui?.StartAfterLogin ?? defaults.Ui.StartAfterLogin
-        };
+		var ui = defaults.Ui with
+		{
+			TrayIcon = document.Ui?.TrayIcon ?? defaults.Ui.TrayIcon,
+			StartAfterLogin = document.Ui?.StartAfterLogin ?? defaults.Ui.StartAfterLogin
+		};
 
-        var capture = defaults.Capture with
-        {
-            DebounceSeconds = document.Capture?.DebounceSeconds ?? defaults.Capture.DebounceSeconds,
-            Backend = document.Capture?.Backend ?? defaults.Capture.Backend,
-            CameraIndex = document.Capture?.CameraIndex ?? defaults.Capture.CameraIndex
-        };
+		var capture = defaults.Capture with
+		{
+			DebounceSeconds = document.Capture?.DebounceSeconds ?? defaults.Capture.DebounceSeconds,
+			Backend = document.Capture?.Backend ?? defaults.Capture.Backend,
+			CameraIndex = document.Capture?.CameraIndex ?? defaults.Capture.CameraIndex
+		};
 
-        var logging = defaults.Logging with
-        {
-            Directory = document.Logging?.Directory ?? defaults.Logging.Directory,
-            RetentionDays = document.Logging?.RetentionDays ?? defaults.Logging.RetentionDays,
-            CleanupIntervalHours = document.Logging?.CleanupIntervalHours ?? defaults.Logging.CleanupIntervalHours
-        };
+		var logging = defaults.Logging with
+		{
+			Directory = document.Logging?.Directory ?? defaults.Logging.Directory,
+			RetentionDays = document.Logging?.RetentionDays ?? defaults.Logging.RetentionDays,
+			CleanupIntervalHours = document.Logging?.CleanupIntervalHours ?? defaults.Logging.CleanupIntervalHours
+		};
 
-        var watermark = defaults.Watermark with
-        {
-            Enabled = document.Watermark?.Enabled ?? defaults.Watermark.Enabled,
-            Format = document.Watermark?.Format ?? defaults.Watermark.Format
-        };
+		var watermark = defaults.Watermark with
+		{
+			Enabled = document.Watermark?.Enabled ?? defaults.Watermark.Enabled,
+			Format = document.Watermark?.Format ?? defaults.Watermark.Format
+		};
 
-        return defaults with
-        {
-            Output = output,
-            Triggers = triggers,
-            Metadata = metadata,
-            Ui = ui,
-            Capture = capture,
-            Logging = logging,
-            Watermark = watermark
-        };
-    }
+		return defaults with
+		{
+			Output = output,
+			Triggers = triggers,
+			Metadata = metadata,
+			Ui = ui,
+			Capture = capture,
+			Logging = logging,
+			Watermark = watermark
+		};
+	}
 
-    private static void Validate(LoginShotConfig config)
-    {
-        var errors = new List<string>();
+	private static void Validate(LoginShotConfig config)
+	{
+		var errors = new List<string>();
 
-        if (string.IsNullOrWhiteSpace(config.Output.Directory))
-        {
-            errors.Add("output.directory must not be empty.");
-        }
+		if (string.IsNullOrWhiteSpace(config.Output.Directory))
+		{
+			errors.Add("output.directory must not be empty.");
+		}
 
-        if (!string.Equals(config.Output.Format, "jpg", StringComparison.OrdinalIgnoreCase))
-        {
-            errors.Add("output.format must be 'jpg' in v1.");
-        }
+		if (!string.Equals(config.Output.Format, "jpg", StringComparison.OrdinalIgnoreCase))
+		{
+			errors.Add("output.format must be 'jpg' in v1.");
+		}
 
-        if (config.Output.MaxWidth is <= 0)
-        {
-            errors.Add("output.maxWidth must be greater than 0 when provided.");
-        }
+		if (config.Output.MaxWidth is <= 0)
+		{
+			errors.Add("output.maxWidth must be greater than 0 when provided.");
+		}
 
-        if (config.Output.JpegQuality < 0.0 || config.Output.JpegQuality > 1.0)
-        {
-            errors.Add("output.jpegQuality must be between 0.0 and 1.0.");
-        }
+		if (config.Output.JpegQuality < 0.0 || config.Output.JpegQuality > 1.0)
+		{
+			errors.Add("output.jpegQuality must be between 0.0 and 1.0.");
+		}
 
-        if (config.Capture.DebounceSeconds < 0)
-        {
-            errors.Add("capture.debounceSeconds must be 0 or greater.");
-        }
+		if (config.Capture.DebounceSeconds < 0)
+		{
+			errors.Add("capture.debounceSeconds must be 0 or greater.");
+		}
 
-        if (!string.Equals(config.Capture.Backend, "opencv", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(config.Capture.Backend, "winrt-mediacapture", StringComparison.OrdinalIgnoreCase))
-        {
-            errors.Add("capture.backend must be either 'opencv' or 'winrt-mediacapture'.");
-        }
+		if (!string.Equals(config.Capture.Backend, "opencv", StringComparison.OrdinalIgnoreCase)
+			&& !string.Equals(config.Capture.Backend, "winrt-mediacapture", StringComparison.OrdinalIgnoreCase))
+		{
+			errors.Add("capture.backend must be either 'opencv' or 'winrt-mediacapture'.");
+		}
 
-        if (config.Capture.CameraIndex is < 0)
-        {
-            errors.Add("capture.cameraIndex must be 0 or greater when provided.");
-        }
+		if (config.Capture.CameraIndex is < 0)
+		{
+			errors.Add("capture.cameraIndex must be 0 or greater when provided.");
+		}
 
-        if (string.IsNullOrWhiteSpace(config.Logging.Directory))
-        {
-            errors.Add("logging.directory must not be empty.");
-        }
+		if (string.IsNullOrWhiteSpace(config.Logging.Directory))
+		{
+			errors.Add("logging.directory must not be empty.");
+		}
 
-        if (config.Logging.RetentionDays < 1)
-        {
-            errors.Add("logging.retentionDays must be 1 or greater.");
-        }
+		if (config.Logging.RetentionDays < 1)
+		{
+			errors.Add("logging.retentionDays must be 1 or greater.");
+		}
 
-        if (config.Logging.CleanupIntervalHours < 1)
-        {
-            errors.Add("logging.cleanupIntervalHours must be 1 or greater.");
-        }
+		if (config.Logging.CleanupIntervalHours < 1)
+		{
+			errors.Add("logging.cleanupIntervalHours must be 1 or greater.");
+		}
 
-        if (string.IsNullOrWhiteSpace(config.Watermark.Format))
-        {
-            errors.Add("watermark.format must not be empty.");
-        }
+		if (string.IsNullOrWhiteSpace(config.Watermark.Format))
+		{
+			errors.Add("watermark.format must not be empty.");
+		}
 
-        if (errors.Count > 0)
-        {
-            throw new ConfigValidationException(string.Join(" ", errors));
-        }
-    }
+		if (errors.Count > 0)
+		{
+			throw new ConfigValidationException(string.Join(" ", errors));
+		}
+	}
 
-    private sealed record ConfigDocument
-    {
-        public OutputDocument? Output { get; init; }
-        public TriggersDocument? Triggers { get; init; }
-        public MetadataDocument? Metadata { get; init; }
-        public UiDocument? Ui { get; init; }
-        public CaptureDocument? Capture { get; init; }
-        public LoggingDocument? Logging { get; init; }
-        public WatermarkDocument? Watermark { get; init; }
-    }
+	private sealed record ConfigDocument
+	{
+		public OutputDocument? Output { get; init; }
+		public TriggersDocument? Triggers { get; init; }
+		public MetadataDocument? Metadata { get; init; }
+		public UiDocument? Ui { get; init; }
+		public CaptureDocument? Capture { get; init; }
+		public LoggingDocument? Logging { get; init; }
+		public WatermarkDocument? Watermark { get; init; }
+	}
 
-    private sealed record OutputDocument
-    {
-        public string? Directory { get; init; }
-        public string? Format { get; init; }
-        public int? MaxWidth { get; init; }
-        public double? JpegQuality { get; init; }
-    }
+	private sealed record OutputDocument
+	{
+		public string? Directory { get; init; }
+		public string? Format { get; init; }
+		public int? MaxWidth { get; init; }
+		public double? JpegQuality { get; init; }
+	}
 
-    private sealed record TriggersDocument
-    {
-        public bool? OnLogon { get; init; }
-        public bool? OnUnlock { get; init; }
-        public bool? OnLock { get; init; }
-    }
+	private sealed record TriggersDocument
+	{
+		public bool? OnLogon { get; init; }
+		public bool? OnUnlock { get; init; }
+		public bool? OnLock { get; init; }
+	}
 
-    private sealed record MetadataDocument
-    {
-        public bool? WriteSidecar { get; init; }
-    }
+	private sealed record MetadataDocument
+	{
+		public bool? WriteSidecar { get; init; }
+	}
 
-    private sealed record UiDocument
-    {
-        public bool? TrayIcon { get; init; }
-        public bool? StartAfterLogin { get; init; }
-    }
+	private sealed record UiDocument
+	{
+		public bool? TrayIcon { get; init; }
+		public bool? StartAfterLogin { get; init; }
+	}
 
-    private sealed record CaptureDocument
-    {
-        public int? DebounceSeconds { get; init; }
-        public string? Backend { get; init; }
-        public int? CameraIndex { get; init; }
-    }
+	private sealed record CaptureDocument
+	{
+		public int? DebounceSeconds { get; init; }
+		public string? Backend { get; init; }
+		public int? CameraIndex { get; init; }
+	}
 
-    private sealed record LoggingDocument
-    {
-        public string? Directory { get; init; }
-        public int? RetentionDays { get; init; }
-        public int? CleanupIntervalHours { get; init; }
-    }
+	private sealed record LoggingDocument
+	{
+		public string? Directory { get; init; }
+		public int? RetentionDays { get; init; }
+		public int? CleanupIntervalHours { get; init; }
+	}
 
-    private sealed record WatermarkDocument
-    {
-        public bool? Enabled { get; init; }
-        public string? Format { get; init; }
-    }
+	private sealed record WatermarkDocument
+	{
+		public bool? Enabled { get; init; }
+		public string? Format { get; init; }
+	}
 }

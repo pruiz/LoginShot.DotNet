@@ -1,14 +1,14 @@
-namespace LoginShot.Config;
+﻿namespace LoginShot.Config;
 
 public sealed record LoginShotConfig(
-    OutputConfig Output,
-    TriggerConfig Triggers,
-    MetadataConfig Metadata,
-    UiConfig Ui,
-    CaptureConfig Capture,
-    LoggingConfig Logging,
-    WatermarkConfig Watermark,
-    string? SourcePath);
+	OutputConfig Output,
+	TriggerConfig Triggers,
+	MetadataConfig Metadata,
+	UiConfig Ui,
+	CaptureConfig Capture,
+	LoggingConfig Logging,
+	WatermarkConfig Watermark,
+	string? SourcePath);
 
 public sealed record OutputConfig(string Directory, string Format, int? MaxWidth, double JpegQuality);
 

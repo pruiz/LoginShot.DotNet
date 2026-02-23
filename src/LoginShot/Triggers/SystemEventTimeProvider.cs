@@ -1,6 +1,6 @@
-namespace LoginShot.Triggers;
+﻿namespace LoginShot.Triggers;
 
 internal sealed class SystemEventTimeProvider : IEventTimeProvider
 {
-    public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
+	public DateTimeOffset UtcNow => DateTimeOffset.UtcNow;
 }
