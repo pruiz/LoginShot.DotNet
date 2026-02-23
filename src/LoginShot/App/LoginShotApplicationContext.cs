@@ -86,7 +86,6 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 		menu.Items.Add(new ToolStripSeparator());
 		menu.Items.Add(new ToolStripMenuItem("Edit config", null, OnEditConfigClicked));
 		menu.Items.Add(new ToolStripMenuItem("Reload config", null, OnReloadConfigClicked));
-		menu.Items.Add(new ToolStripMenuItem("Generate sample config", null, OnGenerateSampleConfigClicked));
 		menu.Items.Add(new ToolStripSeparator());
 		menu.Items.Add(new ToolStripMenuItem("Quit", null, OnQuitClicked));
 
@@ -238,22 +237,6 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 			logger.LogWarning(exception, "Failed to open current log file");
 			ShowBalloon("Log error", $"Failed to open log file: {exception.Message}", ToolTipIcon.Warning);
 		}
-	}
-
-	private static void OnGenerateSampleConfigClicked(object? sender, EventArgs eventArgs)
-	{
-		var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-		var configDirectory = Path.Combine(appDataPath, "LoginShot");
-		var configPath = Path.Combine(configDirectory, "config.yml");
-
-		Directory.CreateDirectory(configDirectory);
-		if (File.Exists(configPath))
-		{
-			return;
-		}
-
-		var sample = ConfigPaths.SampleConfigYaml;
-		File.WriteAllText(configPath, sample);
 	}
 
 	private void OnStartAfterLoginClicked(object? sender, EventArgs eventArgs)

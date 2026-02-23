@@ -108,7 +108,7 @@ LoginShot reads configuration from (first found wins):
 1. `%USERPROFILE%\.config\LoginShot\config.yml`
 2. `%APPDATA%\LoginShot\config.yml`
 
-If no config file is found, LoginShot uses safe defaults:
+If no config file is found, LoginShot writes a default file to `%APPDATA%\LoginShot\config.yml` and uses safe defaults:
 - **Output directory:** `%USERPROFILE%\Pictures\LoginShot`
 - **Format:** `jpg` (1280px max width, 0.85 quality)
 - **Triggers:** `logon`, `unlock`, and `lock` enabled
@@ -211,7 +211,6 @@ When tray icon is enabled, LoginShot exposes:
 | **Start after login** | Toggle startup task registration in Task Scheduler |
 | **Edit config** | Open the active `config.yml` in your default editor |
 | **Reload config** | Re-read YAML config without full restart |
-| **Generate sample config** | Write sample `config.yml` in `%APPDATA%\\LoginShot\\` (no overwrite) |
 | **Quit** | Exit LoginShot |
 
 When config file changes are detected, LoginShot attempts automatic reload. Successful reloads and reload errors are shown via tray balloon notifications. If a changed config is invalid, LoginShot keeps the previous valid in-memory configuration.
