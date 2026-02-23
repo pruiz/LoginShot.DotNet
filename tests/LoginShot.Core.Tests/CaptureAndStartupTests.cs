@@ -3,7 +3,7 @@ using LoginShot.Storage;
 using LoginShot.Startup;
 using LoginShot.Triggers;
 
-namespace LoginShot.Tests;
+namespace LoginShot.Core.Tests;
 
 public class CaptureFileNameBuilderTests
 {

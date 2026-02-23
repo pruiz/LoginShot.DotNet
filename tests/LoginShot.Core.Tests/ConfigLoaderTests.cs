@@ -1,6 +1,6 @@
 using LoginShot.Config;
 
-namespace LoginShot.Tests;
+namespace LoginShot.Core.Tests;
 
 public class ConfigPathResolverTests
 {

@@ -2,7 +2,7 @@ using System.Text.Json;
 using LoginShot.Storage;
 using LoginShot.Triggers;
 
-namespace LoginShot.Tests;
+namespace LoginShot.Core.Tests;
 
 public class CaptureStorageServiceTests
 {
@@ -128,7 +128,7 @@ public class CaptureStorageServiceTests
 
     private static string CreateTempDirectory()
     {
-        var directoryPath = Path.Combine(Path.GetTempPath(), "LoginShot.Tests", Guid.NewGuid().ToString("N"));
+        var directoryPath = Path.Combine(Path.GetTempPath(), "LoginShot.Core.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directoryPath);
         return directoryPath;
     }
