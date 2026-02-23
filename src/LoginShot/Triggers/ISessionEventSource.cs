@@ -1,6 +1,6 @@
-namespace LoginShot.Triggers;
+﻿namespace LoginShot.Triggers;
 
 internal interface ISessionEventSource : IDisposable
 {
-    event EventHandler<SessionEventType>? SessionEventReceived;
+	event EventHandler<SessionEventType>? SessionEventReceived;
 }

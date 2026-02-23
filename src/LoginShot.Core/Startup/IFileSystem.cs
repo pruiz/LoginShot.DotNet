@@ -1,7 +1,7 @@
-namespace LoginShot.Startup;
+﻿namespace LoginShot.Startup;
 
 public interface IFileSystem
 {
-    bool FileExists(string path);
-    void DeleteFile(string path);
+	bool FileExists(string path);
+	void DeleteFile(string path);
 }

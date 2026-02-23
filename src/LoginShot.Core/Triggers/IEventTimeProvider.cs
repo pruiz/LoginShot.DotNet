@@ -1,6 +1,6 @@
-namespace LoginShot.Triggers;
+﻿namespace LoginShot.Triggers;
 
 public interface IEventTimeProvider
 {
-    DateTimeOffset UtcNow { get; }
+	DateTimeOffset UtcNow { get; }
 }

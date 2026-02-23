@@ -1,8 +1,8 @@
-namespace LoginShot.Startup;
+﻿namespace LoginShot.Startup;
 
 public interface IStartupRegistrationService
 {
-    bool IsEnabled();
-    void Enable();
-    void Disable();
+	bool IsEnabled();
+	void Enable();
+	void Disable();
 }
