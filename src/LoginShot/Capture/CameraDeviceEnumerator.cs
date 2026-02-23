@@ -50,10 +50,7 @@ internal sealed class OpenCvCameraDeviceEnumerator : ICameraDeviceEnumerator
 			var names = new List<string>(devices.Length);
 			foreach (var device in devices)
 			{
-				if (!string.IsNullOrWhiteSpace(device.Name))
-				{
-					names.Add(device.Name);
-				}
+				names.Add(device.Name ?? string.Empty);
 			}
 
 			return names;
