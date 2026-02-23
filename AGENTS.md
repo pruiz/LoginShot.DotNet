@@ -89,6 +89,7 @@ Agents may scaffold this structure as needed.
   2. `%APPDATA%\LoginShot\config.yml`
 - Expand `%USERPROFILE%`, `%APPDATA%`, and `%LOCALAPPDATA%`.
 - Normalize configured Windows path separators as needed (support `\` and `/` in YAML path values).
+- If no config file exists, create one with safe defaults on first startup.
 - Support configurable watermark settings (enabled flag and timestamp format string).
 - Provide safe defaults.
 - Validate config and fail with clear diagnostics.
@@ -102,7 +103,6 @@ Agents may scaffold this structure as needed.
   - `Start after login` (startup task toggle)
   - `Edit config`
   - `Reload config`
-  - `Generate sample config`
   - `Quit`
 - Auto-reload config when file changes are detected (with debounce) and notify via tray balloon.
 

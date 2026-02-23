@@ -31,6 +31,20 @@ internal static class Program
 			return;
 		}
 
+		try
+		{
+			config = EnsureConfigFileExists(config, new YamlConfigWriter());
+		}
+		catch (Exception exception)
+		{
+			MessageBox.Show(
+				$"Failed to create default config file: {exception.Message}",
+				"LoginShot configuration error",
+				MessageBoxButtons.OK,
+				MessageBoxIcon.Error);
+			return;
+		}
+
 		var fileLoggingOptions = new FileLoggingOptions(
 			config.Logging.Directory,
 			config.Logging.RetentionDays,
@@ -97,6 +111,17 @@ internal static class Program
 		}
 
 		return LogLevel.Information;
+	}
+
+	private static LoginShotConfig EnsureConfigFileExists(LoginShotConfig config, IConfigWriter configWriter)
+	{
+		if (!string.IsNullOrWhiteSpace(config.SourcePath))
+		{
+			return config;
+		}
+
+		var configPath = configWriter.Save(config, preferredPath: null);
+		return config with { SourcePath = configPath };
 	}
 
 	private static string GetAppVersion()
