@@ -1,4 +1,4 @@
-﻿using LoginShot.Util;
+using LoginShot.Util;
 using Microsoft.Extensions.Logging;
 
 namespace LoginShot.Tests;
@@ -23,7 +23,7 @@ public class LogFilePathProviderTests
 
 		try
 		{
-			var options = new FileLoggingOptions(tempDirectory, 14, 24);
+			var options = new FileLoggingOptions(tempDirectory, 14, 24, LogLevel.Information);
 			using var provider = new DailyFileLoggerProvider(options);
 			var logger = provider.CreateLogger("LoginShot.Tests.Log");
 

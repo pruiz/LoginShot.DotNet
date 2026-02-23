@@ -1,22 +1,24 @@
-﻿namespace LoginShot.Capture;
+﻿using Microsoft.Extensions.Logging;
+
+namespace LoginShot.Capture;
 
 internal static class CaptureBackendFactory
 {
-	public static ICameraCaptureService Create(string backend, Action<string>? log)
+	public static ICameraCaptureService Create(string backend, ILogger logger)
 	{
 		if (string.Equals(backend, "opencv", StringComparison.OrdinalIgnoreCase))
 		{
-			return new OpenCvCameraCaptureService();
+			return new OpenCvCameraCaptureService(logger);
 		}
 
 		if (string.Equals(backend, "winrt-mediacapture", StringComparison.OrdinalIgnoreCase))
 		{
 			// TODO: Implement WinRT MediaCapture backend and select it via capture.backend.
-			log?.Invoke("TODO: implement WinRT MediaCapture backend. Falling back to OpenCV.");
-			return new OpenCvCameraCaptureService();
+			logger.LogWarning("TODO: implement WinRT MediaCapture backend. Falling back to OpenCV.");
+			return new OpenCvCameraCaptureService(logger);
 		}
 
-		log?.Invoke($"Unknown capture backend '{backend}'. Falling back to OpenCV.");
-		return new OpenCvCameraCaptureService();
+		logger.LogWarning("Unknown capture backend '{Backend}'. Falling back to OpenCV.", backend);
+		return new OpenCvCameraCaptureService(logger);
 	}
 }

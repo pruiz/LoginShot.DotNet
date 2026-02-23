@@ -1,4 +1,5 @@
-﻿using YamlDotNet.Serialization;
+using Microsoft.Extensions.Logging;
+using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace LoginShot.Config;
@@ -100,7 +101,8 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 		{
 			Directory = document.Logging?.Directory ?? defaults.Logging.Directory,
 			RetentionDays = document.Logging?.RetentionDays ?? defaults.Logging.RetentionDays,
-			CleanupIntervalHours = document.Logging?.CleanupIntervalHours ?? defaults.Logging.CleanupIntervalHours
+			CleanupIntervalHours = document.Logging?.CleanupIntervalHours ?? defaults.Logging.CleanupIntervalHours,
+			Level = document.Logging?.Level ?? defaults.Logging.Level
 		};
 
 		var watermark = defaults.Watermark with
@@ -176,6 +178,11 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 			errors.Add("logging.cleanupIntervalHours must be 1 or greater.");
 		}
 
+		if (!Enum.TryParse<LogLevel>(config.Logging.Level, ignoreCase: true, out _))
+		{
+			errors.Add("logging.level must be one of Trace, Debug, Information, Warning, Error, Critical, or None.");
+		}
+
 		if (string.IsNullOrWhiteSpace(config.Watermark.Format))
 		{
 			errors.Add("watermark.format must not be empty.");
@@ -236,6 +243,7 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 		public string? Directory { get; init; }
 		public int? RetentionDays { get; init; }
 		public int? CleanupIntervalHours { get; init; }
+		public string? Level { get; init; }
 	}
 
 	private sealed record WatermarkDocument

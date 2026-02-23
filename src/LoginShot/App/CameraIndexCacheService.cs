@@ -42,6 +42,7 @@ internal sealed class CameraIndexCacheService
 
 		if (shouldStartRefresh)
 		{
+			logger.LogInformation("Starting camera enumeration refresh (probeCount={ProbeCount})", cameraIndexProbeCount);
 			_ = Task.Run(() => RefreshInBackground(onRefreshed));
 		}
 
@@ -57,6 +58,10 @@ internal sealed class CameraIndexCacheService
 		try
 		{
 			devices = cameraDeviceEnumerator.EnumerateDevices(cameraIndexProbeCount);
+			logger.LogInformation(
+				"Camera enumeration completed. found={Count}, devices={Devices}",
+				devices.Count,
+				FormatDeviceList(devices));
 		}
 		catch (Exception exception)
 		{
@@ -72,5 +77,15 @@ internal sealed class CameraIndexCacheService
 		}
 
 		onRefreshed();
+	}
+
+	private static string FormatDeviceList(IReadOnlyList<CameraDeviceDescriptor> devices)
+	{
+		if (devices.Count == 0)
+		{
+			return "none";
+		}
+
+		return string.Join(", ", devices.Select(device => $"{device.Index}:{(string.IsNullOrWhiteSpace(device.Name) ? "(unnamed)" : device.Name)}"));
 	}
 }

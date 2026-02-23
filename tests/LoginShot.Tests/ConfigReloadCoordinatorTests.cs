@@ -167,7 +167,7 @@ public class ConfigReloadCoordinatorTests
 			new MetadataConfig(true),
 			new UiConfig(true, false),
 			new CaptureConfig(3, "opencv", null),
-			new LoggingConfig("C:\\Users\\pablo\\AppData\\Local\\LoginShot\\logs", 14, 24),
+			new LoggingConfig("C:\\Users\\pablo\\AppData\\Local\\LoginShot\\logs", 14, 24, "Information"),
 			new WatermarkConfig(true, "yyyy-MM-dd HH:mm:ss zzz"),
 			sourcePath);
 	}

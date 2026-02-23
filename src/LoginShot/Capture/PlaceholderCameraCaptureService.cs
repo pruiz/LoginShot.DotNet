@@ -1,6 +1,4 @@
-﻿using LoginShot.Triggers;
-
-namespace LoginShot.Capture;
+﻿namespace LoginShot.Capture;
 
 internal sealed class PlaceholderCameraCaptureService : ICameraCaptureService
 {
@@ -10,7 +8,8 @@ internal sealed class PlaceholderCameraCaptureService : ICameraCaptureService
 			Success: false,
 			ImageBytes: null,
 			ErrorMessage: "Camera capture is not implemented yet.",
-			CameraDeviceName: "unknown");
+			CameraDeviceName: "unknown",
+			Diagnostics: null);
 
 		return Task.FromResult(result);
 	}
