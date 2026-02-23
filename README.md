@@ -115,6 +115,7 @@ If no config file is found, LoginShot uses safe defaults:
 - **Metadata:** JSON sidecar enabled
 - **Tray icon:** enabled
 - **Debounce:** 3 seconds
+- **Logging level:** `Information`
 
 Path values in YAML may use either `\` or `/` separators. LoginShot normalizes configured Windows paths during load.
 
@@ -149,6 +150,7 @@ logging:
   directory: "%LOCALAPPDATA%\\LoginShot\\logs"
   retentionDays: 14
   cleanupIntervalHours: 24
+  level: "Information" # Trace|Debug|Information|Warning|Error|Critical|None
 
 watermark:
   enabled: true
@@ -229,6 +231,7 @@ When config file changes are detected, LoginShot attempts automatic reload. Succ
 - **No camera access / capture fails**
   - Windows Settings -> Privacy & security -> Camera.
   - Ensure camera access is enabled for desktop apps.
+  - For deeper diagnostics, set `logging.level: "Debug"` in `config.yml`, then use tray menu `Open log` and inspect camera attempt lines.
 - **Startup toggle does not work**
   - Verify task `LoginShot.StartAfterLogin` exists in Task Scheduler.
   - Confirm task action points to the current executable and includes `--startup-trigger=logon`.

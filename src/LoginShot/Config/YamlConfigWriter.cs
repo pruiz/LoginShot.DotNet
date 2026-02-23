@@ -60,6 +60,7 @@ internal sealed class YamlConfigWriter : IConfigWriter
 		builder.AppendLine($"  directory: \"{Escape(config.Logging.Directory)}\"");
 		builder.AppendLine($"  retentionDays: {config.Logging.RetentionDays}");
 		builder.AppendLine($"  cleanupIntervalHours: {config.Logging.CleanupIntervalHours}");
+		builder.AppendLine($"  level: \"{Escape(config.Logging.Level)}\"");
 		builder.AppendLine();
 
 		builder.AppendLine("watermark:");

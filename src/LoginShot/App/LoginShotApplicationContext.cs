@@ -122,6 +122,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
 	private void OnCameraMenuOpening(object? sender, EventArgs eventArgs)
 	{
+		logger.LogInformation("Camera menu opened; refreshing camera list");
 		RefreshCameraMenuItems();
 	}
 
@@ -156,7 +157,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 	{
 		try
 		{
-			var captureService = CaptureBackendFactory.Create(currentConfig.Capture.Backend, message => logger.LogWarning("{Message}", message));
+			var captureService = CaptureBackendFactory.Create(currentConfig.Capture.Backend, logger);
 			var request = new CaptureRequest(
 				EventType: SessionEventType.Manual,
 				MaxWidth: currentConfig.Output.MaxWidth,
@@ -373,6 +374,8 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 
 	private void ApplyCameraSelection(int? cameraIndex)
 	{
+		logger.LogInformation("Applying camera selection from tray. selectedCameraIndex={CameraIndex}", cameraIndex);
+
 		if (!cameraSelectionService.TryApplySelection(currentConfig, cameraIndex, out var updatedConfig, out var errorMessage))
 		{
 			MessageBox.Show(

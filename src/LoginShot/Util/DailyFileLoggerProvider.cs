@@ -88,7 +88,7 @@ internal sealed class DailyFileLoggerProvider : ILoggerProvider
 
 		public bool IsEnabled(LogLevel logLevel)
 		{
-			return logLevel >= LogLevel.Information;
+			return logLevel >= provider.options.MinimumLevel;
 		}
 
 		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,

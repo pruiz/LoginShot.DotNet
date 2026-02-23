@@ -31,7 +31,7 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
 			return;
 		}
 
-		var cameraCaptureService = CaptureBackendFactory.Create(config.Capture.Backend, message => logger.LogWarning("{Message}", message));
+		var cameraCaptureService = CaptureBackendFactory.Create(config.Capture.Backend, logger);
 		var captureRequest = new CaptureRequest(
 			EventType: eventType,
 			MaxWidth: config.Output.MaxWidth,
@@ -51,6 +51,18 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
 			logger.LogWarning("Capture fallback note for {EventType}: {Message}", eventType, captureResult.ErrorMessage);
 		}
 
+		if (captureResult.Diagnostics is not null)
+		{
+			logger.LogInformation(
+				"Camera diagnostics. selected={SelectedCameraIndex}, used={UsedCameraIndex}, backend={Backend}, attempts={Attempts}, durationMs={TotalDurationMs}, failureCode={FailureCode}",
+				captureResult.Diagnostics.SelectedCameraIndex,
+				captureResult.Diagnostics.UsedCameraIndex,
+				captureResult.Diagnostics.Backend,
+				captureResult.Diagnostics.Attempts,
+				captureResult.Diagnostics.TotalDurationMs,
+				captureResult.Diagnostics.FailureCode ?? "none");
+		}
+
 		var request = new CapturePersistenceRequest(
 			TimestampUtc: DateTimeOffset.UtcNow,
 			EventType: eventType,
@@ -59,11 +71,11 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
 			ImageBytes: captureResult.ImageBytes,
 			Failure: captureResult.Success
 				? null
-				: new CaptureFailureInfo("camera_capture_failed", captureResult.ErrorMessage),
+				: new CaptureFailureInfo(captureResult.Diagnostics?.FailureCode ?? "camera_capture_failed", captureResult.ErrorMessage),
 			Hostname: Environment.MachineName,
 			Username: Environment.UserName,
 			App: GetAppInfo(),
-			Camera: new CaptureCameraInfo(captureResult.CameraDeviceName ?? "unknown"),
+			Camera: new CaptureCameraInfo(captureResult.CameraDeviceName ?? "unknown", captureResult.Diagnostics),
 			WriteSidecar: config.Metadata.WriteSidecar || !captureResult.Success);
 
 		try

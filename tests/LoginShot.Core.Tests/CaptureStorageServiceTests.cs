@@ -82,6 +82,50 @@ public class CaptureStorageServiceTests
 	}
 
 	[Test]
+	public async Task PersistAsync_WhenCameraDiagnosticsProvided_WritesDiagnosticsToSidecar()
+	{
+		var tempRoot = CreateTempDirectory();
+		try
+		{
+			var service = new CaptureStorageService(new AtomicFileWriter());
+			var diagnostics = new CaptureDiagnostics(
+				SelectedCameraIndex: 1,
+				UsedCameraIndex: 1,
+				Backend: "dshow",
+				Attempts: 2,
+				TotalDurationMs: 220,
+				FinalFrameStats: new CaptureFrameStats(1280, 720, 3, 35.2, 0.0, 240.0, 0.72, false),
+				AttemptDetails: new[]
+				{
+					new CaptureAttemptDiagnostics(1, "dshow", 1, 100, "read_failed", null, "Unable to read frame from camera."),
+					new CaptureAttemptDiagnostics(1, "dshow", 2, 120, "success", new CaptureFrameStats(1280, 720, 3, 35.2, 0.0, 240.0, 0.72, false), "Captured frame via dshow (attempt 2).")
+				},
+				FailureCode: null);
+
+			var request = CreateRequest(tempRoot, SessionEventType.Manual, new byte[] { 9, 8, 7 }, failure: null, writeSidecar: true, diagnostics: diagnostics);
+
+			var result = await service.PersistAsync(request);
+
+			var sidecarText = File.ReadAllText(result.SidecarPath!);
+			using var document = JsonDocument.Parse(sidecarText);
+			var diagnosticsElement = document.RootElement
+				.GetProperty("camera")
+				.GetProperty("diagnostics");
+
+			Assert.Multiple(() =>
+			{
+				Assert.That(diagnosticsElement.GetProperty("backend").GetString(), Is.EqualTo("dshow"));
+				Assert.That(diagnosticsElement.GetProperty("attempts").GetInt32(), Is.EqualTo(2));
+				Assert.That(diagnosticsElement.GetProperty("attemptDetails").GetArrayLength(), Is.EqualTo(2));
+			});
+		}
+		finally
+		{
+			Directory.Delete(tempRoot, recursive: true);
+		}
+	}
+
+	[Test]
 	public void AtomicFileWriter_DoesNotLeaveTempFilesAfterWrite()
 	{
 		var tempRoot = CreateTempDirectory();
@@ -110,7 +154,8 @@ public class CaptureStorageServiceTests
 		SessionEventType eventType,
 		byte[]? imageBytes,
 		CaptureFailureInfo? failure,
-		bool writeSidecar)
+		bool writeSidecar,
+		CaptureDiagnostics? diagnostics = null)
 	{
 		return new CapturePersistenceRequest(
 			TimestampUtc: new DateTimeOffset(2026, 2, 22, 14, 30, 0, TimeSpan.Zero),
@@ -122,7 +167,7 @@ public class CaptureStorageServiceTests
 			Hostname: "WORKSTATION-01",
 			Username: "pablo",
 			App: new CaptureAppInfo("LoginShot", "0.1.0", "1"),
-			Camera: new CaptureCameraInfo("Integrated Camera"),
+			Camera: new CaptureCameraInfo("Integrated Camera", Diagnostics: diagnostics),
 			WriteSidecar: writeSidecar);
 	}
 

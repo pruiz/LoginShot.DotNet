@@ -30,6 +30,7 @@ internal static class ConfigPaths
 		"  directory: \"%LOCALAPPDATA%\\\\LoginShot\\\\logs\"\n" +
 		"  retentionDays: 14\n" +
 		"  cleanupIntervalHours: 24\n" +
+		"  level: \"Information\"\n" +
 		"\n" +
 		"watermark:\n" +
 		"  enabled: true\n" +

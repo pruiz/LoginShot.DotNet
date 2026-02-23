@@ -53,6 +53,7 @@ public class LoginShotConfigLoaderTests
 			Assert.That(config.Logging.Directory, Is.EqualTo(Path.Combine("C:\\Users\\pablo\\AppData\\Local", "LoginShot", "logs")));
 			Assert.That(config.Logging.RetentionDays, Is.EqualTo(14));
 			Assert.That(config.Logging.CleanupIntervalHours, Is.EqualTo(24));
+			Assert.That(config.Logging.Level, Is.EqualTo("Information"));
 			Assert.That(config.Watermark.Enabled, Is.True);
 			Assert.That(config.Watermark.Format, Is.EqualTo("yyyy-MM-dd HH:mm:ss zzz"));
 		});
@@ -121,6 +122,21 @@ public class LoginShotConfigLoaderTests
 			Assert.That(config.Watermark.Enabled, Is.False);
 			Assert.That(config.Watermark.Format, Is.EqualTo("yyyy/MM/dd HH:mm:ss zzz"));
 		});
+	}
+
+	[Test]
+	public void Load_WhenLoggingLevelConfigured_UsesConfiguredValue()
+	{
+		var provider = new FakeConfigFileProvider();
+		var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+		provider.Files[resolver.GetSearchPaths()[0]] =
+			"logging:\n" +
+			"  level: \"Debug\"\n";
+		var loader = new LoginShotConfigLoader(resolver, provider);
+
+		var config = loader.Load();
+
+		Assert.That(config.Logging.Level, Is.EqualTo("Debug"));
 	}
 
 	[Test]
@@ -224,6 +240,21 @@ public class LoginShotConfigLoaderTests
 		var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
 
 		Assert.That(exception!.Message, Does.Contain("logging.cleanupIntervalHours must be 1 or greater."));
+	}
+
+	[Test]
+	public void Load_WhenLoggingLevelInvalid_ThrowsValidationException()
+	{
+		var provider = new FakeConfigFileProvider();
+		var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+		provider.Files[resolver.GetSearchPaths()[0]] =
+			"logging:\n" +
+			"  level: \"verbose-ish\"\n";
+		var loader = new LoginShotConfigLoader(resolver, provider);
+
+		var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
+
+		Assert.That(exception!.Message, Does.Contain("logging.level must be one of Trace, Debug, Information, Warning, Error, Critical, or None."));
 	}
 
 	[Test]

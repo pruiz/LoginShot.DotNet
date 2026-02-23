@@ -1,3 +1,5 @@
-﻿namespace LoginShot.Util;
+﻿using Microsoft.Extensions.Logging;
 
-internal sealed record FileLoggingOptions(string DirectoryPath, int RetentionDays, int CleanupIntervalHours);
+namespace LoginShot.Util;
+
+internal sealed record FileLoggingOptions(string DirectoryPath, int RetentionDays, int CleanupIntervalHours, LogLevel MinimumLevel);

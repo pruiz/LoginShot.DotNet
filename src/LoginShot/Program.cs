@@ -34,7 +34,8 @@ internal static class Program
 		var fileLoggingOptions = new FileLoggingOptions(
 			config.Logging.Directory,
 			config.Logging.RetentionDays,
-			config.Logging.CleanupIntervalHours);
+			config.Logging.CleanupIntervalHours,
+			ParseLogLevel(config.Logging.Level));
 
 		using var loggerFactory = LoggerFactory.Create(builder =>
 		{
@@ -57,7 +58,7 @@ internal static class Program
 				triggerDispatcher,
 				configLoader,
 				new YamlConfigWriter(),
-				new OpenCvCameraDeviceEnumerator(),
+				new OpenCvCameraDeviceEnumerator(loggerFactory.CreateLogger<OpenCvCameraDeviceEnumerator>()),
 				loggerFactory.CreateLogger<LoginShotApplicationContext>(),
 				loggerFactory.CreateLogger<SessionEventRouter>()));
 		}
@@ -79,5 +80,15 @@ internal static class Program
 		var fileProvider = new SystemConfigFileProvider();
 		var pathResolver = new ConfigPathResolver(userProfilePath, appDataPath, localAppDataPath, fileProvider);
 		return new LoginShotConfigLoader(pathResolver, fileProvider);
+	}
+
+	private static LogLevel ParseLogLevel(string configuredLevel)
+	{
+		if (Enum.TryParse<LogLevel>(configuredLevel, ignoreCase: true, out var level))
+		{
+			return level;
+		}
+
+		return LogLevel.Information;
 	}
 }
