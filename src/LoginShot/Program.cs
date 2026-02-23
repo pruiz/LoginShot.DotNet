@@ -45,6 +45,13 @@ internal static class Program
 			builder.AddProvider(new DailyFileLoggerProvider(fileLoggingOptions));
 		});
 
+		var startupLogger = loggerFactory.CreateLogger("Startup");
+		startupLogger.LogInformation(
+			"LoginShot starting. version={Version}, pid={ProcessId}, configSource={ConfigSource}",
+			GetAppVersion(),
+			Environment.ProcessId,
+			config.SourcePath ?? "defaults");
+
 		using var logRetentionService = new LogRetentionService(fileLoggingOptions, loggerFactory.CreateLogger<LogRetentionService>());
 		logRetentionService.Start();
 
@@ -90,5 +97,16 @@ internal static class Program
 		}
 
 		return LogLevel.Information;
+	}
+
+	private static string GetAppVersion()
+	{
+		var assembly = typeof(Program).Assembly;
+		return assembly
+			.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), inherit: false)
+			.OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+			.FirstOrDefault()?.InformationalVersion
+			?? assembly.GetName().Version?.ToString()
+			?? "0.0.0";
 	}
 }
