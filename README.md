@@ -243,6 +243,51 @@ When config file changes are detected, LoginShot attempts automatic reload. Succ
     - `pixelFormats: ["MJPG", "YUY2", "auto"]`
     - `resolutions: ["1280x720", "640x480", "auto"]`
     - `convertRgbMode: "false"` (or `"true"`) to test conversion behavior.
+
+### Camera Workaround Presets
+
+Use one preset at a time in `capture.negotiation`, then reload config and test with tray `Capture now`.
+
+Preset A (common UVC fallback: DShow + MJPG):
+
+```yaml
+capture:
+  negotiation:
+    backendOrder: ["dshow", "msmf", "any"]
+    pixelFormats: ["MJPG", "auto"]
+    convertRgbMode: "auto"
+    resolutions: ["1280x720", "640x480", "auto"]
+    attemptsPerCombination: 2
+    warmupFrames: 6
+```
+
+Preset B (YUY2 path for cameras that fail MJPG):
+
+```yaml
+capture:
+  negotiation:
+    backendOrder: ["dshow", "msmf", "any"]
+    pixelFormats: ["YUY2", "auto"]
+    convertRgbMode: "true"
+    resolutions: ["640x480", "1280x720", "auto"]
+    attemptsPerCombination: 2
+    warmupFrames: 8
+```
+
+Preset C (MSMF-first and explicit conversion off):
+
+```yaml
+capture:
+  negotiation:
+    backendOrder: ["msmf", "dshow", "any"]
+    pixelFormats: ["auto", "NV12", "MJPG"]
+    convertRgbMode: "false"
+    resolutions: ["1280x720", "640x480", "auto"]
+    attemptsPerCombination: 2
+    warmupFrames: 6
+```
+
+If all presets still produce black frames, keep `logging.level: "Debug"` and share the log plus sidecar diagnostics from a failing capture.
 - **Startup toggle does not work**
   - Verify task `LoginShot.StartAfterLogin` exists in Task Scheduler.
   - Confirm task action points to the current executable and includes `--startup-trigger=logon`.
