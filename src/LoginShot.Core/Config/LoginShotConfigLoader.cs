@@ -95,7 +95,16 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 		{
 			DebounceSeconds = document.Capture?.DebounceSeconds ?? defaults.Capture.DebounceSeconds,
 			Backend = document.Capture?.Backend ?? defaults.Capture.Backend,
-			CameraIndex = document.Capture?.CameraIndex ?? defaults.Capture.CameraIndex
+			CameraIndex = document.Capture?.CameraIndex ?? defaults.Capture.CameraIndex,
+			Negotiation = defaults.Capture.Negotiation with
+			{
+				BackendOrder = document.Capture?.Negotiation?.BackendOrder ?? defaults.Capture.Negotiation.BackendOrder,
+				PixelFormats = document.Capture?.Negotiation?.PixelFormats ?? defaults.Capture.Negotiation.PixelFormats,
+				ConvertRgbMode = document.Capture?.Negotiation?.ConvertRgbMode ?? defaults.Capture.Negotiation.ConvertRgbMode,
+				Resolutions = document.Capture?.Negotiation?.Resolutions ?? defaults.Capture.Negotiation.Resolutions,
+				AttemptsPerCombination = document.Capture?.Negotiation?.AttemptsPerCombination ?? defaults.Capture.Negotiation.AttemptsPerCombination,
+				WarmupFrames = document.Capture?.Negotiation?.WarmupFrames ?? defaults.Capture.Negotiation.WarmupFrames
+			}
 		};
 
 		var logging = defaults.Logging with
@@ -162,6 +171,60 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 		if (config.Capture.CameraIndex is < 0)
 		{
 			errors.Add("capture.cameraIndex must be 0 or greater when provided.");
+		}
+
+		if (config.Capture.Negotiation.AttemptsPerCombination < 1 || config.Capture.Negotiation.AttemptsPerCombination > 5)
+		{
+			errors.Add("capture.negotiation.attemptsPerCombination must be between 1 and 5.");
+		}
+
+		if (config.Capture.Negotiation.BackendOrder.Count == 0)
+		{
+			errors.Add("capture.negotiation.backendOrder must contain at least one backend.");
+		}
+
+		if (config.Capture.Negotiation.PixelFormats.Count == 0)
+		{
+			errors.Add("capture.negotiation.pixelFormats must contain at least one value.");
+		}
+
+		if (config.Capture.Negotiation.Resolutions.Count == 0)
+		{
+			errors.Add("capture.negotiation.resolutions must contain at least one value.");
+		}
+
+		if (config.Capture.Negotiation.WarmupFrames < 0 || config.Capture.Negotiation.WarmupFrames > 30)
+		{
+			errors.Add("capture.negotiation.warmupFrames must be between 0 and 30.");
+		}
+
+		if (!IsValidConvertRgbMode(config.Capture.Negotiation.ConvertRgbMode))
+		{
+			errors.Add("capture.negotiation.convertRgbMode must be one of auto, true, or false.");
+		}
+
+		foreach (var backend in config.Capture.Negotiation.BackendOrder)
+		{
+			if (!IsValidCaptureBackendAlias(backend))
+			{
+				errors.Add($"capture.negotiation.backendOrder contains unsupported backend '{backend}'. Supported values: dshow, msmf, any.");
+			}
+		}
+
+		foreach (var pixelFormat in config.Capture.Negotiation.PixelFormats)
+		{
+			if (!IsValidPixelFormat(pixelFormat))
+			{
+				errors.Add($"capture.negotiation.pixelFormats contains unsupported value '{pixelFormat}'. Supported values: auto, MJPG, YUY2, NV12.");
+			}
+		}
+
+		foreach (var resolution in config.Capture.Negotiation.Resolutions)
+		{
+			if (!IsValidResolution(resolution))
+			{
+				errors.Add($"capture.negotiation.resolutions contains invalid value '{resolution}'. Use auto or <width>x<height>.");
+			}
 		}
 
 		if (string.IsNullOrWhiteSpace(config.Logging.Directory))
@@ -237,6 +300,17 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 		public int? DebounceSeconds { get; init; }
 		public string? Backend { get; init; }
 		public int? CameraIndex { get; init; }
+		public CaptureNegotiationDocument? Negotiation { get; init; }
+	}
+
+	private sealed record CaptureNegotiationDocument
+	{
+		public string[]? BackendOrder { get; init; }
+		public string[]? PixelFormats { get; init; }
+		public string? ConvertRgbMode { get; init; }
+		public string[]? Resolutions { get; init; }
+		public int? AttemptsPerCombination { get; init; }
+		public int? WarmupFrames { get; init; }
 	}
 
 	private sealed record LoggingDocument
@@ -277,5 +351,49 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 		}
 
 		throw new ConfigValidationException($"{settingName} must be a valid number.");
+	}
+
+	private static bool IsValidCaptureBackendAlias(string backend)
+	{
+		return string.Equals(backend, "dshow", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(backend, "msmf", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(backend, "any", StringComparison.OrdinalIgnoreCase);
+	}
+
+	private static bool IsValidPixelFormat(string pixelFormat)
+	{
+		return string.Equals(pixelFormat, "auto", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(pixelFormat, "MJPG", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(pixelFormat, "YUY2", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(pixelFormat, "NV12", StringComparison.OrdinalIgnoreCase);
+	}
+
+	private static bool IsValidConvertRgbMode(string convertRgbMode)
+	{
+		return string.Equals(convertRgbMode, "auto", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(convertRgbMode, "true", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(convertRgbMode, "false", StringComparison.OrdinalIgnoreCase);
+	}
+
+	private static bool IsValidResolution(string resolution)
+	{
+		if (string.Equals(resolution, "auto", StringComparison.OrdinalIgnoreCase))
+		{
+			return true;
+		}
+
+		var separatorIndex = resolution.IndexOfAny(['x', 'X']);
+		if (separatorIndex <= 0 || separatorIndex >= resolution.Length - 1)
+		{
+			return false;
+		}
+
+		var widthText = resolution[..separatorIndex];
+		var heightText = resolution[(separatorIndex + 1)..];
+
+		return int.TryParse(widthText, NumberStyles.None, CultureInfo.InvariantCulture, out var width)
+			&& int.TryParse(heightText, NumberStyles.None, CultureInfo.InvariantCulture, out var height)
+			&& width > 0
+			&& height > 0;
 	}
 }

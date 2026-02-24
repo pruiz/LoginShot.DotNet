@@ -145,6 +145,13 @@ capture:
   debounceSeconds: 3
   backend: "opencv"   # "winrt-mediacapture" is accepted but currently falls back to OpenCV
   cameraIndex: null    # null = auto/default camera; otherwise 0, 1, 2...
+  negotiation:
+    backendOrder: ["dshow", "msmf", "any"]
+    pixelFormats: ["auto", "MJPG", "YUY2", "NV12"]
+    convertRgbMode: "auto"  # auto|true|false
+    resolutions: ["auto", "1280x720", "640x480"]
+    attemptsPerCombination: 2
+    warmupFrames: 6
 
 logging:
   directory: "%LOCALAPPDATA%\\LoginShot\\logs"
@@ -231,6 +238,11 @@ When config file changes are detected, LoginShot attempts automatic reload. Succ
   - Windows Settings -> Privacy & security -> Camera.
   - Ensure camera access is enabled for desktop apps.
   - For deeper diagnostics, set `logging.level: "Debug"` in `config.yml`, then use tray menu `Open log` and inspect camera attempt lines.
+  - For black-image cameras, try tuning `capture.negotiation` combinations on the customer machine:
+    - `backendOrder: ["dshow", "msmf", "any"]`
+    - `pixelFormats: ["MJPG", "YUY2", "auto"]`
+    - `resolutions: ["1280x720", "640x480", "auto"]`
+    - `convertRgbMode: "false"` (or `"true"`) to test conversion behavior.
 - **Startup toggle does not work**
   - Verify task `LoginShot.StartAfterLogin` exists in Task Scheduler.
   - Confirm task action points to the current executable and includes `--startup-trigger=logon`.
