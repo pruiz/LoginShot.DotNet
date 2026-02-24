@@ -170,6 +170,36 @@ public class LoginShotConfigLoaderTests
 	}
 
 	[Test]
+	public void Load_WhenJpegQualityUsesCommaDecimal_ParsesSuccessfully()
+	{
+		var provider = new FakeConfigFileProvider();
+		var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+		provider.Files[resolver.GetSearchPaths()[0]] =
+			"output:\n" +
+			"  jpegQuality: 0,85\n";
+		var loader = new LoginShotConfigLoader(resolver, provider);
+
+		var config = loader.Load();
+
+		Assert.That(config.Output.JpegQuality, Is.EqualTo(0.85).Within(0.0001));
+	}
+
+	[Test]
+	public void Load_WhenJpegQualityNotNumeric_ThrowsValidationException()
+	{
+		var provider = new FakeConfigFileProvider();
+		var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+		provider.Files[resolver.GetSearchPaths()[0]] =
+			"output:\n" +
+			"  jpegQuality: not-a-number\n";
+		var loader = new LoginShotConfigLoader(resolver, provider);
+
+		var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
+
+		Assert.That(exception!.Message, Does.Contain("output.jpegQuality must be a valid number."));
+	}
+
+	[Test]
 	public void Load_WhenYamlInvalid_ThrowsValidationException()
 	{
 		var provider = new FakeConfigFileProvider();
