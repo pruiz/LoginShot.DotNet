@@ -162,6 +162,7 @@ internal sealed class LoginShotApplicationContext : ApplicationContext
 				MaxWidth: currentConfig.Output.MaxWidth,
 				JpegQuality: currentConfig.Output.JpegQuality,
 				CameraIndex: currentConfig.Capture.CameraIndex,
+				Negotiation: currentConfig.Capture.Negotiation,
 				WatermarkEnabled: currentConfig.Watermark.Enabled,
 				WatermarkFormat: currentConfig.Watermark.Format,
 				Hostname: Environment.MachineName);

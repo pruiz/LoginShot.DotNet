@@ -37,6 +37,7 @@ internal sealed class StartupTriggerDispatcher : ITriggerDispatcher
 			MaxWidth: config.Output.MaxWidth,
 			JpegQuality: config.Output.JpegQuality,
 			CameraIndex: config.Capture.CameraIndex,
+			Negotiation: config.Capture.Negotiation,
 			WatermarkEnabled: config.Watermark.Enabled,
 			WatermarkFormat: config.Watermark.Format,
 			Hostname: Environment.MachineName);

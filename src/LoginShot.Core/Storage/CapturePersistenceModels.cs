@@ -17,9 +17,15 @@ public sealed record CaptureFrameStats(
 public sealed record CaptureAttemptDiagnostics(
 	int CameraIndex,
 	string Backend,
+	string RequestedPixelFormat,
+	string RequestedResolution,
+	string RequestedConvertRgbMode,
 	int Attempt,
 	long DurationMs,
 	string Outcome,
+	string? ActualPixelFormat,
+	int? ActualWidth,
+	int? ActualHeight,
 	CaptureFrameStats? FrameStats,
 	string? Message);
 

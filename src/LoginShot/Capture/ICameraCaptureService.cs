@@ -1,4 +1,5 @@
-﻿using LoginShot.Triggers;
+﻿using LoginShot.Config;
+using LoginShot.Triggers;
 using LoginShot.Storage;
 
 namespace LoginShot.Capture;
@@ -8,6 +9,7 @@ internal sealed record CaptureRequest(
 	int? MaxWidth,
 	double JpegQuality,
 	int? CameraIndex,
+	CaptureNegotiationConfig Negotiation,
 	bool WatermarkEnabled,
 	string WatermarkFormat,
 	string Hostname);

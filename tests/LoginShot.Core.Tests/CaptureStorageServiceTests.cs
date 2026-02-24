@@ -97,8 +97,8 @@ public class CaptureStorageServiceTests
 				FinalFrameStats: new CaptureFrameStats(1280, 720, 3, 35.2, 0.0, 240.0, 0.72, false),
 				AttemptDetails: new[]
 				{
-					new CaptureAttemptDiagnostics(1, "dshow", 1, 100, "read_failed", null, "Unable to read frame from camera."),
-					new CaptureAttemptDiagnostics(1, "dshow", 2, 120, "success", new CaptureFrameStats(1280, 720, 3, 35.2, 0.0, 240.0, 0.72, false), "Captured frame via dshow (attempt 2).")
+					new CaptureAttemptDiagnostics(1, "dshow", "MJPG", "1280x720", "auto", 1, 100, "read_failed", "MJPG", 1280, 720, null, "Unable to read frame from camera."),
+					new CaptureAttemptDiagnostics(1, "dshow", "MJPG", "1280x720", "auto", 2, 120, "success", "MJPG", 1280, 720, new CaptureFrameStats(1280, 720, 3, 35.2, 0.0, 240.0, 0.72, false), "Captured frame via dshow (attempt 2).")
 				},
 				FailureCode: null);
 
