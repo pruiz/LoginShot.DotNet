@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -69,7 +70,7 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 			Directory = document.Output?.Directory ?? defaults.Output.Directory,
 			Format = document.Output?.Format ?? defaults.Output.Format,
 			MaxWidth = document.Output?.MaxWidth ?? defaults.Output.MaxWidth,
-			JpegQuality = document.Output?.JpegQuality ?? defaults.Output.JpegQuality
+			JpegQuality = ParseOptionalDouble(document.Output?.JpegQuality, defaults.Output.JpegQuality, "output.jpegQuality")
 		};
 
 		var triggers = defaults.Triggers with
@@ -210,7 +211,7 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 		public string? Directory { get; init; }
 		public string? Format { get; init; }
 		public int? MaxWidth { get; init; }
-		public double? JpegQuality { get; init; }
+		public string? JpegQuality { get; init; }
 	}
 
 	private sealed record TriggersDocument
@@ -250,5 +251,31 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 	{
 		public bool? Enabled { get; init; }
 		public string? Format { get; init; }
+	}
+
+	private static double ParseOptionalDouble(string? value, double fallback, string settingName)
+	{
+		if (string.IsNullOrWhiteSpace(value))
+		{
+			return fallback;
+		}
+
+		var trimmed = value.Trim();
+		if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out var invariantParsed))
+		{
+			return invariantParsed;
+		}
+
+		if (double.TryParse(trimmed, NumberStyles.Float, CultureInfo.CurrentCulture, out var currentParsed))
+		{
+			return currentParsed;
+		}
+
+		if (trimmed.Contains(',') && double.TryParse(trimmed.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var commaNormalized))
+		{
+			return commaNormalized;
+		}
+
+		throw new ConfigValidationException($"{settingName} must be a valid number.");
 	}
 }

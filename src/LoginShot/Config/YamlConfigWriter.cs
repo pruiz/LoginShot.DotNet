@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Globalization;
+using System.Text;
 
 namespace LoginShot.Config;
 
@@ -32,7 +33,7 @@ internal sealed class YamlConfigWriter : IConfigWriter
 		builder.AppendLine($"  directory: \"{Escape(config.Output.Directory)}\"");
 		builder.AppendLine($"  format: \"{Escape(config.Output.Format)}\"");
 		builder.AppendLine($"  maxWidth: {(config.Output.MaxWidth is null ? "null" : config.Output.MaxWidth.Value)}");
-		builder.AppendLine($"  jpegQuality: {config.Output.JpegQuality:0.##}");
+		builder.AppendLine($"  jpegQuality: {config.Output.JpegQuality.ToString("0.##", CultureInfo.InvariantCulture)}");
 		builder.AppendLine();
 
 		builder.AppendLine("triggers:");
