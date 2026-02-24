@@ -50,6 +50,12 @@ public class LoginShotConfigLoaderTests
 			Assert.That(config.Capture.DebounceSeconds, Is.EqualTo(3));
 			Assert.That(config.Capture.Backend, Is.EqualTo("opencv"));
 			Assert.That(config.Capture.CameraIndex, Is.Null);
+			Assert.That(config.Capture.Negotiation.BackendOrder, Is.EqualTo(new[] { "dshow", "msmf", "any" }));
+			Assert.That(config.Capture.Negotiation.PixelFormats, Is.EqualTo(new[] { "auto", "MJPG", "YUY2", "NV12" }));
+			Assert.That(config.Capture.Negotiation.ConvertRgbMode, Is.EqualTo("auto"));
+			Assert.That(config.Capture.Negotiation.Resolutions, Is.EqualTo(new[] { "auto", "1280x720", "640x480" }));
+			Assert.That(config.Capture.Negotiation.AttemptsPerCombination, Is.EqualTo(2));
+			Assert.That(config.Capture.Negotiation.WarmupFrames, Is.EqualTo(6));
 			Assert.That(config.Logging.Directory, Is.EqualTo(Path.Combine("C:\\Users\\pablo\\AppData\\Local", "LoginShot", "logs")));
 			Assert.That(config.Logging.RetentionDays, Is.EqualTo(14));
 			Assert.That(config.Logging.CleanupIntervalHours, Is.EqualTo(24));
@@ -225,6 +231,51 @@ public class LoginShotConfigLoaderTests
 		var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
 
 		Assert.That(exception!.Message, Does.Contain("capture.backend must be either 'opencv' or 'winrt-mediacapture'"));
+	}
+
+	[Test]
+	public void Load_WhenCaptureNegotiationOverridesSpecified_UsesConfiguredValues()
+	{
+		var provider = new FakeConfigFileProvider();
+		var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+		provider.Files[resolver.GetSearchPaths()[0]] =
+			"capture:\n" +
+			"  negotiation:\n" +
+			"    backendOrder: [\"msmf\", \"dshow\"]\n" +
+			"    pixelFormats: [\"auto\", \"YUY2\"]\n" +
+			"    convertRgbMode: \"false\"\n" +
+			"    resolutions: [\"640x480\", \"auto\"]\n" +
+			"    attemptsPerCombination: 3\n" +
+			"    warmupFrames: 4\n";
+		var loader = new LoginShotConfigLoader(resolver, provider);
+
+		var config = loader.Load();
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(config.Capture.Negotiation.BackendOrder, Is.EqualTo(new[] { "msmf", "dshow" }));
+			Assert.That(config.Capture.Negotiation.PixelFormats, Is.EqualTo(new[] { "auto", "YUY2" }));
+			Assert.That(config.Capture.Negotiation.ConvertRgbMode, Is.EqualTo("false"));
+			Assert.That(config.Capture.Negotiation.Resolutions, Is.EqualTo(new[] { "640x480", "auto" }));
+			Assert.That(config.Capture.Negotiation.AttemptsPerCombination, Is.EqualTo(3));
+			Assert.That(config.Capture.Negotiation.WarmupFrames, Is.EqualTo(4));
+		});
+	}
+
+	[Test]
+	public void Load_WhenCaptureNegotiationBackendOrderInvalid_ThrowsValidationException()
+	{
+		var provider = new FakeConfigFileProvider();
+		var resolver = new ConfigPathResolver("C:\\Users\\pablo", "C:\\Users\\pablo\\AppData\\Roaming", "C:\\Users\\pablo\\AppData\\Local", provider);
+		provider.Files[resolver.GetSearchPaths()[0]] =
+			"capture:\n" +
+			"  negotiation:\n" +
+			"    backendOrder: [\"ffmpeg\"]\n";
+		var loader = new LoginShotConfigLoader(resolver, provider);
+
+		var exception = Assert.Throws<ConfigValidationException>(() => loader.Load());
+
+		Assert.That(exception!.Message, Does.Contain("capture.negotiation.backendOrder contains unsupported backend 'ffmpeg'"));
 	}
 
 	[Test]

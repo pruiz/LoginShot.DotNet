@@ -55,6 +55,25 @@ internal sealed class YamlConfigWriter : IConfigWriter
 		builder.AppendLine($"  debounceSeconds: {config.Capture.DebounceSeconds}");
 		builder.AppendLine($"  backend: \"{Escape(config.Capture.Backend)}\"");
 		builder.AppendLine($"  cameraIndex: {(config.Capture.CameraIndex is null ? "null" : config.Capture.CameraIndex.Value)}");
+		builder.AppendLine("  negotiation:");
+		builder.AppendLine("    backendOrder:");
+		foreach (var backend in config.Capture.Negotiation.BackendOrder)
+		{
+			builder.AppendLine($"      - \"{Escape(backend)}\"");
+		}
+		builder.AppendLine("    pixelFormats:");
+		foreach (var pixelFormat in config.Capture.Negotiation.PixelFormats)
+		{
+			builder.AppendLine($"      - \"{Escape(pixelFormat)}\"");
+		}
+		builder.AppendLine($"    convertRgbMode: \"{Escape(config.Capture.Negotiation.ConvertRgbMode)}\"");
+		builder.AppendLine("    resolutions:");
+		foreach (var resolution in config.Capture.Negotiation.Resolutions)
+		{
+			builder.AppendLine($"      - \"{Escape(resolution)}\"");
+		}
+		builder.AppendLine($"    attemptsPerCombination: {config.Capture.Negotiation.AttemptsPerCombination}");
+		builder.AppendLine($"    warmupFrames: {config.Capture.Negotiation.WarmupFrames}");
 		builder.AppendLine();
 
 		builder.AppendLine("logging:");

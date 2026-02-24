@@ -18,7 +18,19 @@ public sealed record MetadataConfig(bool WriteSidecar);
 
 public sealed record UiConfig(bool TrayIcon, bool StartAfterLogin);
 
-public sealed record CaptureConfig(int DebounceSeconds, string Backend, int? CameraIndex);
+public sealed record CaptureConfig(
+	int DebounceSeconds,
+	string Backend,
+	int? CameraIndex,
+	CaptureNegotiationConfig Negotiation);
+
+public sealed record CaptureNegotiationConfig(
+	IReadOnlyList<string> BackendOrder,
+	IReadOnlyList<string> PixelFormats,
+	string ConvertRgbMode,
+	IReadOnlyList<string> Resolutions,
+	int AttemptsPerCombination,
+	int WarmupFrames);
 
 public sealed record LoggingConfig(string Directory, int RetentionDays, int CleanupIntervalHours, string Level);
 

@@ -56,7 +56,17 @@ public class CameraSelectionServiceTests
 			new TriggerConfig(true, true, true),
 			new MetadataConfig(true),
 			new UiConfig(true, false),
-			new CaptureConfig(3, "opencv", cameraIndex),
+			new CaptureConfig(
+				3,
+				"opencv",
+				cameraIndex,
+				new CaptureNegotiationConfig(
+					BackendOrder: ["dshow", "msmf", "any"],
+					PixelFormats: ["auto", "MJPG", "YUY2", "NV12"],
+					ConvertRgbMode: "auto",
+					Resolutions: ["auto", "1280x720", "640x480"],
+					AttemptsPerCombination: 2,
+					WarmupFrames: 6)),
 			new LoggingConfig("C:\\Users\\pablo\\AppData\\Local\\LoginShot\\logs", 14, 24, "Information"),
 			new WatermarkConfig(true, "yyyy-MM-dd HH:mm:ss zzz"),
 			sourcePath);
