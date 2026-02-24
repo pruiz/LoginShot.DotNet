@@ -382,7 +382,7 @@ public sealed class LoginShotConfigLoader : IConfigLoader
 			return true;
 		}
 
-		var separatorIndex = resolution.IndexOf('x');
+		var separatorIndex = resolution.IndexOfAny(['x', 'X']);
 		if (separatorIndex <= 0 || separatorIndex >= resolution.Length - 1)
 		{
 			return false;
